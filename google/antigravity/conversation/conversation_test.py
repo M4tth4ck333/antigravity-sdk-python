@@ -15,8 +15,7 @@
 """Tests for the Conversation stateful session layer.
 
 Validates history accumulation, compaction tracking, chat() convenience,
-state introspection, trigger registration, and clean delegation to the
-Connection ABC.
+state introspection, and clean delegation to the Connection ABC.
 """
 
 import unittest
@@ -412,20 +411,6 @@ class ConversationLifecycleTest(unittest.IsolatedAsyncioTestCase):
     conv = conversation.Conversation(mock_connection)
     await conv.disconnect()
     mock_connection.disconnect.assert_called_once()
-
-
-class ConversationTriggerTest(unittest.IsolatedAsyncioTestCase):
-  """Validates trigger registration through Conversation."""
-
-  async def test_register_trigger_delegates(self):
-    """Verifies register_trigger delegates to connection."""
-    mock_connection = mock.MagicMock(spec=connection.Connection)
-    conv = conversation.Conversation(mock_connection)
-
-    trigger_fn = mock.MagicMock()
-    conv.register_trigger(trigger_fn)
-
-    mock_connection.register_trigger.assert_called_once_with(trigger_fn)
 
 
 class ConversationClearHistoryTest(unittest.IsolatedAsyncioTestCase):

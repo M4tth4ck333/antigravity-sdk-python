@@ -23,7 +23,7 @@ import os
 import shutil
 import struct
 import subprocess
-from typing import Any, AsyncIterator, Awaitable, Callable
+from typing import Any, AsyncIterator, Callable
 
 from google.genai import types as genai_types
 from google.protobuf import json_format
@@ -35,7 +35,6 @@ from google.antigravity.connections import connection
 from google.antigravity.hooks import hook_runner as h_runner
 from google.antigravity.hooks import hooks
 from google.antigravity.tools import tool_runner as t_runner
-from google.antigravity.triggers import triggers as triggers_module
 
 resources = None
 
@@ -825,34 +824,6 @@ class LocalConnection(connection.Connection):
       )
       input_event = localharness_pb2.InputEvent(tool_response=response)
       await self._ws.send(json_format.MessageToJson(input_event))
-
-  def register_trigger(self, trigger: Callable[..., Awaitable[Any]]) -> None:
-    """Registers a trigger with the connection."""
-    ctx = triggers_module.TriggerContext(connection=self)
-    trigger_name = getattr(trigger, "__name__", repr(trigger))
-    task = asyncio.create_task(
-        self._run_trigger_wrapper(trigger, ctx, trigger_name),
-        name=f"trigger-{trigger_name}",
-    )
-    self._background_tasks.add(task)
-    task.add_done_callback(self._background_tasks.discard)
-
-  @staticmethod
-  async def _run_trigger_wrapper(
-      trigger: Callable[..., Awaitable[Any]],
-      ctx: Any,
-      trigger_name: str,
-  ) -> None:
-    """Wraps a trigger call with error handling."""
-    try:
-      await trigger(ctx)
-    except asyncio.CancelledError:
-      logging.info("Trigger '%s' cancelled.", trigger_name)
-      raise
-    except Exception:  # pylint: disable=broad-except
-      logging.exception(
-          "Trigger '%s' failed with unhandled exception.", trigger_name
-      )
 
   async def send_trigger_notification(self, content: str) -> None:
     """Sends a trigger message to the agent."""

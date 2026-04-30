@@ -149,8 +149,13 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
       "local_connection.LocalConnectionStrategy"
   )
   @mock.patch.object(conversation.Conversation, "create")
+  @mock.patch(
+      "google.antigravity.agent."
+      "trigger_runner.TriggerRunner"
+  )
   async def test_agent_register_trigger(
       self,
+      mock_trigger_runner_class,
       mock_conv_create,
       mock_strategy_class,
   ):
@@ -160,26 +165,40 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     mock_strategy_class.return_value = mock_strategy_instance
 
     mock_conversation = mock.MagicMock(spec=conversation.Conversation)
+    mock_conversation._connection = mock.MagicMock()
 
     mock_cm = mock.AsyncMock()
     mock_cm.__aenter__.return_value = mock_conversation
     mock_conv_create.return_value = mock_cm
 
+    mock_runner_instance = mock.AsyncMock()
+    mock_trigger_runner_class.return_value = mock_runner_instance
+
     async def my_trigger(ctx):
       del ctx  # Unused.
       pass
 
-    # Test constructor registration
+    # Test constructor registration: TriggerRunner started with trigger.
     async with agent.Agent(system_instructions="test", triggers=[my_trigger]):
-      mock_conversation.register_trigger.assert_called_once_with(my_trigger)
+      mock_trigger_runner_class.assert_called_once()
+      call_kwargs = mock_trigger_runner_class.call_args[1]
+      self.assertEqual(call_kwargs["triggers"], [my_trigger])
+      mock_runner_instance.start.assert_called_once()
 
-    mock_conversation.register_trigger.reset_mock()
+    # TriggerRunner.stop() called during __aexit__.
+    mock_runner_instance.stop.assert_called_once()
 
-    # Test dynamic registration
+    mock_trigger_runner_class.reset_mock()
+    mock_runner_instance.reset_mock()
+
+    # Test dynamic registration before start.
     ag = agent.Agent(system_instructions="test")
     ag.register_trigger(my_trigger)
     async with ag:
-      mock_conversation.register_trigger.assert_called_once_with(my_trigger)
+      mock_trigger_runner_class.assert_called_once()
+      call_kwargs = mock_trigger_runner_class.call_args[1]
+      self.assertEqual(call_kwargs["triggers"], [my_trigger])
+      mock_runner_instance.start.assert_called_once()
 
   @mock.patch(
       "google.antigravity.agent."

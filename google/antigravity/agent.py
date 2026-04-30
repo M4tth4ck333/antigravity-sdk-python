@@ -19,6 +19,7 @@ import logging
 from typing import Any, Callable
 
 from google.antigravity import types
+from google.antigravity.connections import connection as connection_module
 from google.antigravity.connections import local_connection
 from google.antigravity.conversation import conversation
 from google.antigravity.hooks import cli
@@ -27,6 +28,7 @@ from google.antigravity.hooks import hooks
 from google.antigravity.hooks import policy
 from google.antigravity.mcp import bridge
 from google.antigravity.tools import tool_runner
+from google.antigravity.triggers import trigger_runner
 from google.antigravity.triggers import triggers as triggers_lib
 
 
@@ -104,7 +106,7 @@ class Agent:
     Raises:
       RuntimeError: If the agent has already started.
     """
-    if self._conversation:
+    if self._trigger_runner:
       raise RuntimeError(
           "Cannot register triggers after the agent has started."
       )
@@ -184,11 +186,14 @@ class Agent:
       self._conversation_cm = conversation.Conversation.create(self._strategy)
       self._conversation = await self._conversation_cm.__aenter__()
 
-      # Register triggers
+      # Start triggers via TriggerRunner.
       if self._pending_triggers:
-        logging.info("Registering triggers...")
-        for trigger in self._pending_triggers:
-          self._conversation.register_trigger(trigger)
+        logging.info("Starting triggers...")
+        self._trigger_runner = trigger_runner.TriggerRunner(
+            triggers=list(self._pending_triggers),
+            connection=self._conversation._connection,
+        )
+        await self._trigger_runner.start()
         self._pending_triggers.clear()
 
       return self
@@ -200,6 +205,9 @@ class Agent:
   async def __aexit__(self, exc_type, exc_val, exc_tb):
     """Stops the agent session."""
     logging.info("Stopping Agent session")
+    if self._trigger_runner:
+      await self._trigger_runner.stop()
+      self._trigger_runner = None
     if self._mcp_bridge:
       await self._mcp_bridge.stop()
     if self._conversation_cm:
@@ -244,3 +252,20 @@ class Agent:
       except Exception as e:  # pylint: disable=broad-exception-caught
         logging.exception("Error in interactive loop: %s", e)
         print(f"Error: {e}")
+
+  @property
+  def connection(self) -> connection_module.Connection:
+    """Returns the underlying Connection.
+
+    Intended for advanced use cases that need direct transport access.
+    Prefer Agent methods for normal interaction — bypassing the Agent
+    and Conversation layers skips history tracking and hook dispatch.
+
+    Raises:
+      RuntimeError: If the agent session has not been started.
+    """
+    if not self._conversation:
+      raise RuntimeError(
+          "Agent session not started. Use 'async with Agent(...)'."
+      )
+    return self._conversation._connection

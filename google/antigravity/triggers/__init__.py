@@ -18,22 +18,9 @@ Triggers are long-lived async functions that run alongside an agent
 session, react to external events (cron, file changes, webhooks),
 and push messages back into the agent.
 
-Public API:
-  TriggerContext — handle for sending messages to the agent.
-  Trigger — type alias for async trigger functions.
-  TriggerRunner — lifecycle manager for triggers.
-  every — helper for interval/cron triggers.
-  on_file_change — helper for file-watching triggers.
-  TriggerDelivery — controls message delivery (re-exported from types).
-  FileChange — a single filesystem change (re-exported from types).
-  FileChangeKind — kind of filesystem change (re-exported from types).
-"""
+Import from the specific submodule you need::
 
-from google.antigravity.triggers.helpers import every
-from google.antigravity.triggers.helpers import on_file_change
-from google.antigravity.triggers.trigger_runner import TriggerRunner
-from google.antigravity.triggers.triggers import Trigger
-from google.antigravity.triggers.triggers import TriggerContext
-from google.antigravity.types import FileChange
-from google.antigravity.types import FileChangeKind
-from google.antigravity.types import TriggerDelivery
+    from google.antigravity.triggers import triggers
+    from google.antigravity.triggers import trigger_runner
+    from google.antigravity.triggers import helpers
+"""

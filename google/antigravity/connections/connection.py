@@ -24,7 +24,7 @@ backend type and how to tear it down.
 
 
 import abc
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator
 from google.antigravity import types
 
 
@@ -102,15 +102,6 @@ class Connection(abc.ABC):
       results: A list of ToolResult objects.
     """
     pass
-
-  @abc.abstractmethod
-  def register_trigger(self, trigger: Callable[..., Any]) -> None:
-    """Registers a trigger with the connection.
-
-    Args:
-      trigger: The trigger function to register.
-    """
-    ...
 
   @abc.abstractmethod
   async def send_trigger_notification(self, content: str) -> None:

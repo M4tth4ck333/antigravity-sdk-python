@@ -21,27 +21,27 @@ Use **triggers** for external events (timers, file changes, webhooks).
 ## Quick Start
 
 ```python
-from google.antigravity.triggers import (
-    TriggerContext, every, on_file_change,
-    TriggerRunner, FileChange, FileChangeKind,
-)
+from google.antigravity.triggers import triggers
+from google.antigravity.triggers import trigger_runner
+from google.antigravity.triggers import helpers
+from google.antigravity import types
 
 # 1. Define a trigger (it's just an async function).
-async def health_check(ctx: TriggerContext) -> None:
+async def health_check(ctx: triggers.TriggerContext) -> None:
   """Pings the agent every 5 minutes."""
   while True:
     await asyncio.sleep(300)
     await ctx.send("Health check")
 
 # 2. Or use a helper factory.
-async def on_config_change(ctx, changes: list[FileChange]):
+async def on_config_change(ctx, changes: list[types.FileChange]):
   for change in changes:
     await ctx.send(f"{change.kind.value}: {change.path}")
 
-config_watcher = on_file_change("/etc/app/config.yaml", on_config_change)
+config_watcher = helpers.on_file_change("/etc/app/config.yaml", on_config_change)
 
 # 3. Wire them into the session.
-async with TriggerRunner(
+async with trigger_runner.TriggerRunner(
     triggers=[health_check, config_watcher],
     connection=connection,
 ) as runner:

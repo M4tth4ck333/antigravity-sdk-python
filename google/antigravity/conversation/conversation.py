@@ -17,7 +17,6 @@
 Conversation is the Layer 2 session API. It wraps a Connection with:
 - Step history accumulation (with compaction index tracking)
 - A chat() convenience method (send + collect in one call)
-- Trigger registration surface
 - State introspection (idle, turn count, last response)
 
 Layer 1 (Agent) delegates to Conversation; power users can use
@@ -25,7 +24,7 @@ Conversation directly with any ConnectionStrategy.
 """
 
 import contextlib
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator
 
 from google.antigravity import types
 from google.antigravity.connections import connection
@@ -242,16 +241,3 @@ class Conversation:
   async def disconnect(self) -> None:
     """Disconnect the conversation's background stream."""
     await self._connection.disconnect()
-
-  # ---------------------------------------------------------------------------
-  # Triggers
-  # ---------------------------------------------------------------------------
-
-  def register_trigger(self, trigger: Callable[..., Any]) -> None:
-    """Registers a trigger with the underlying connection.
-
-    Args:
-      trigger: The trigger function to register. Must be an async function
-        accepting a TriggerContext.
-    """
-    self._connection.register_trigger(trigger)
