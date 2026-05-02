@@ -20,14 +20,6 @@ A wrapper class for callables that have an explicit JSON Schema defined. This is
 
 ## Available Tools and Utilities
 
-### `gemini_client.py`
-
-Provides `get_gemini_client(config)` helper to create a unified `genai.Client` instance based on `GeminiConfig`.
-
-### `image_generation.py`
-
-Provides `get_image_generation_tool(client, model)` which returns a tool function for generating images using the Gemini API.
-
 ## Usage Example
 
 ```python
@@ -53,5 +45,3 @@ print(results[0].result)
 ## Files
 
 - `tool_runner.py`: Defines `ToolRunner` and `ToolWithSchema`.
-- `gemini_client.py`: Utility for creating `genai.Client`.
-- `image_generation.py`: Tool for generating images.
