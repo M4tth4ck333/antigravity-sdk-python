@@ -45,8 +45,9 @@ import sys
 from absl import app
 from absl import logging
 
+from google.antigravity.agent import Agent
 from google.antigravity.connections.local import local_connection
-from google.antigravity.conversation import conversation
+from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
 
 
 # ---------------------------------------------------------------------------
@@ -62,15 +63,12 @@ async def single_query() -> None:
   print("SCENARIO 0: Single query (one-shot)")
   print("=" * 60)
 
-  strategy = local_connection.LocalConnectionStrategy()
-  async with conversation.Conversation.create(strategy) as conv:
+  config = LocalAgentConfig()
+  async with Agent(config) as agent:
     prompt = "What is 2 + 2? Reply with just the number."
     print(f"  >>> {prompt}")
-    await conv.send(prompt)
-    async for step in conv.receive_steps():
-      if step.is_complete_response:
-        print(f"  <<< {step.content}")
-        break
+    response = await agent.chat(prompt)
+    print(f"  <<< {await response.text()}")
     print("  PASS: single-query conversation completed.")
 
 
@@ -83,29 +81,22 @@ async def multi_turn() -> None:
   print("SCENARIO 1: Multi-turn on one conversation.Conversation")
   print("=" * 60)
 
-  strategy = local_connection.LocalConnectionStrategy()
-  async with conversation.Conversation.create(strategy) as conv:
+  config = LocalAgentConfig()
+  async with Agent(config) as agent:
     # Turn 1: establish a fact.
     prompt1 = "Remember: the secret code is 'banana'."
     print(f"  >>> {prompt1}")
-    await conv.send(prompt1)
-    async for step in conv.receive_steps():
-      if step.is_complete_response:
-        print(f"  [T1] {step.content}")
-        break
+    response1 = await agent.chat(prompt1)
+    print(f"  [T1] {await response1.text()}")
 
     # Turn 2: ask about the fact from turn 1.
     prompt2 = "What secret code did I just tell you? Reply with the code only."
     print(f"  >>> {prompt2}")
-    await conv.send(prompt2)
-    response = ""
-    async for step in conv.receive_steps():
-      if step.is_complete_response:
-        response = step.content
-        print(f"  [T2] {response}")
-        break
+    response2 = await agent.chat(prompt2)
+    response_text = await response2.text()
+    print(f"  [T2] {response_text}")
 
-    if "banana" in response.lower():
+    if "banana" in response_text.lower():
       print("  PASS: context retained across turns.")
     else:
       print("  INCONCLUSIVE: responded, but didn't echo 'banana'.")
@@ -127,37 +118,28 @@ async def sequential_conversations() -> None:
   print("SCENARIO 2: Multiple independent conversations")
   print("=" * 60)
 
-  strategy = local_connection.LocalConnectionStrategy()
+  config = LocalAgentConfig()
 
-  # -- Conv1: use and disconnect immediately --
-  print("  Creating conversation 1...")
-  async with conversation.Conversation.create(strategy) as conv1:
-    await conv1.send("Say 'hello from conv1'.")
-    async for step in conv1.receive_steps():
-      if step.is_complete_response:
-        print(f"  [Conv1] {step.content}")
-        break
-  print("  Disconnected conversation 1.\n")
+  # -- Agent 1: use and disconnect immediately --
+  print("  Creating agent 1...")
+  async with Agent(config) as agent1:
+    response1 = await agent1.chat("Say 'hello from conv1'.")
+    print(f"  [Conv1] {await response1.text()}")
+  print("  Disconnected agent 1.\n")
 
-  # -- Conv2: use but keep open --
-  print("  Creating conversation 2...")
-  async with conversation.Conversation.create(strategy) as conv2:
-    await conv2.send("Say 'hello from conv2'.")
-    async for step in conv2.receive_steps():
-      if step.is_complete_response:
-        print(f"  [Conv2] {step.content}")
-        break
+  # -- Agent 2: use but keep open --
+  print("  Creating agent 2...")
+  async with Agent(config) as agent2:
+    response2 = await agent2.chat("Say 'hello from conv2'.")
+    print(f"  [Conv2] {await response2.text()}")
 
-    # -- Conv3: use but keep open --
-    print("  Creating conversation 3...")
-    async with conversation.Conversation.create(strategy) as conv3:
-      await conv3.send("Say 'hello from conv3'.")
-      async for step in conv3.receive_steps():
-        if step.is_complete_response:
-          print(f"  [Conv3] {step.content}")
-          break
+    # -- Agent 3: use but keep open --
+    print("  Creating agent 3...")
+    async with Agent(config) as agent3:
+      response3 = await agent3.chat("Say 'hello from conv3'.")
+      print(f"  [Conv3] {await response3.text()}")
 
-  print("  PASS: all three conversations completed independently.")
+  print("  PASS: all three agents completed independently.")
 
 
 # ---------------------------------------------------------------------------
@@ -173,18 +155,15 @@ async def disconnect_cleanup() -> None:
   print("SCENARIO 3: Disconnect cleanup")
   print("=" * 60)
 
-  strategy = local_connection.LocalConnectionStrategy()
+  config = LocalAgentConfig()
 
-  async with conversation.Conversation.create(strategy) as conv:
+  async with Agent(config) as agent:
     print("  >>> Say 'hi'.")
-    await conv.send("Say 'hi'.")
-    async for step in conv.receive_steps():
-      if step.is_complete_response:
-        print(f"  {step.content}")
-        break
+    response = await agent.chat("Say 'hi'.")
+    print(f"  {await response.text()}")
 
     # Peek at the subprocess while the connection is still alive.
-    lc = conv._connection  # pylint: disable=protected-access
+    lc = agent.connection
     assert isinstance(lc, local_connection.LocalConnection)
     process = lc._process  # pylint: disable=protected-access
     pid = process.pid

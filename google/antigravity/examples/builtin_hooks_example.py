@@ -40,9 +40,9 @@ from absl import app
 from absl import logging
 
 from google.antigravity import types
-from google.antigravity.connections.local.local_connection import LocalConnectionStrategy
+from google.antigravity.agent import Agent
+from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
 from google.antigravity.connections.local import types as local_types
-from google.antigravity.conversation.conversation import Conversation
 from google.antigravity.hooks import hook_runner as hooks_runner
 from google.antigravity.hooks import hooks
 
@@ -132,19 +132,14 @@ class LogPostTurn(hooks.PostTurnHook):
 # =============================================================================
 
 
-async def run_prompt(conversation: Conversation, prompt: str) -> None:
+async def run_prompt(agent: Agent, prompt: str) -> None:
   """Sends a prompt and prints the final response."""
   print(f"\n{'='*60}")
   print(f"--- Sending: {prompt!r:.80} ---")
   print(f"{'='*60}")
-  await conversation.send(prompt)
-  async for step in conversation.receive_steps():
-    if step.is_complete_response:
-      cascade_id = getattr(step, "cascade_id", "")
-      trajectory_id = getattr(step, "trajectory_id", "")
-      is_parent = not cascade_id or trajectory_id == cascade_id
-      label = "Final response" if is_parent else "Subagent response"
-      print(f"\n--- {label} ---\n{step.content[:200]}\n")
+
+  response = await agent.chat(prompt)
+  print(f"\n--- Final response ---\n{(await response.text())[:200]}\n")
 
 
 # =============================================================================
@@ -163,50 +158,49 @@ async def run():
       with open(os.path.join(tmpdir, name), "w") as f:
         f.write(f"contents of {name}\n")
 
-    hr = hooks_runner.HookRunner(
-        pre_tool_call_decide_hooks=[LogBuiltinDecide()],
-        post_tool_call_hooks=[LogBuiltinPostTool()],
-        on_tool_error_hooks=[LogBuiltinError()],
-        post_turn_hooks=[LogPostTurn()],
-    )
-
-    strategy = LocalConnectionStrategy(
-        hook_runner=hr,
-        gemini_config=types.GeminiConfig(),
-        capabilities_config=types.CapabilitiesConfig(
+    config = LocalAgentConfig(
+        hooks=[
+            LogBuiltinDecide(),
+            LogBuiltinPostTool(),
+            LogBuiltinError(),
+            LogPostTurn(),
+        ],
+        capabilities=types.CapabilitiesConfig(
             enable_subagents=True,
         ),
     )
+    config.gemini_config = types.GeminiConfig()
 
-    async with Conversation.create(strategy) as conversation:
+    logging.info("Starting agent...")
+    async with Agent(config) as agent:
       # 1. run_command: exercise command execution.
       await run_prompt(
-          conversation,
+          agent,
           "Run the command 'echo hello world' and tell me what it printed.",
       )
 
       # 2. list_dir: exercise directory listing.
       await run_prompt(
-          conversation,
+          agent,
           f"List the contents of the directory {tmpdir}.",
       )
 
       # 3. view_file: exercise file viewing.
       await run_prompt(
-          conversation,
+          agent,
           f"View the contents of the file {sample_file}.",
       )
 
       # 4. grep_search: exercise file content search.
       await run_prompt(
-          conversation,
+          agent,
           f"Search for the string 'PostToolCallHook'"
           f" in the file {sample_file}.",
       )
 
       # 5. PostTurnHook only: no tools needed.
       await run_prompt(
-          conversation,
+          agent,
           "What is 2 + 2? Answer directly without using any tools.",
       )
 

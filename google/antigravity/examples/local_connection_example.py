@@ -37,8 +37,8 @@ from absl import flags
 from absl import logging
 
 from google.antigravity import types
-from google.antigravity.connections.local.local_connection import LocalConnectionStrategy
-from google.antigravity.conversation.conversation import Conversation
+from google.antigravity.agent import Agent
+from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
 from google.antigravity.hooks import cli
 from google.antigravity.hooks import hook_runner as hooks_runner
 from google.antigravity.hooks import policy
@@ -87,40 +87,22 @@ def _add(cur: int | None, val: int | None) -> int | None:
 
 
 def _print_telemetry(
-    steps_this_turn: list[types.Step],
-    conversation: Conversation,
+    turn_usage: types.UsageMetadata | None,
+    cumul: types.UsageMetadata,
+    history: list[types.Step],
 ) -> None:
   """Prints telemetry data for the current turn."""
-  # Per-turn token usage (summed across all model invocations in this turn).
-  turn_usage = types.UsageMetadata()
-  for s in steps_this_turn:
-    if s.usage_metadata:
-      u = s.usage_metadata
-      turn_usage.prompt_token_count = _add(
-          turn_usage.prompt_token_count, u.prompt_token_count
-      )
-      turn_usage.candidates_token_count = _add(
-          turn_usage.candidates_token_count, u.candidates_token_count
-      )
-      turn_usage.total_token_count = _add(
-          turn_usage.total_token_count, u.total_token_count
-      )
-      turn_usage.thoughts_token_count = _add(
-          turn_usage.thoughts_token_count, u.thoughts_token_count
-      )
-      turn_usage.cached_content_token_count = _add(
-          turn_usage.cached_content_token_count, u.cached_content_token_count
-      )
-
   print("\n--- Turn Token Usage ---")
-  print(f"  Prompt tokens:   {turn_usage.prompt_token_count}")
-  print(f"  Cached tokens:   {turn_usage.cached_content_token_count}")
-  print(f"  Output tokens:   {turn_usage.candidates_token_count}")
-  print(f"  Thinking tokens: {turn_usage.thoughts_token_count}")
-  print(f"  Total tokens:    {turn_usage.total_token_count}")
+  if turn_usage:
+    print(f"  Prompt tokens:   {turn_usage.prompt_token_count}")
+    print(f"  Cached tokens:   {turn_usage.cached_content_token_count}")
+    print(f"  Output tokens:   {turn_usage.candidates_token_count}")
+    print(f"  Thinking tokens: {turn_usage.thoughts_token_count}")
+    print(f"  Total tokens:    {turn_usage.total_token_count}")
+  else:
+    print("  Usage data not available for this turn.")
 
   # Cumulative session usage.
-  cumul = conversation.total_usage
   print("\n--- Session Cumulative Usage ---")
   print(f"  Prompt tokens:   {cumul.prompt_token_count}")
   print(f"  Cached tokens:   {cumul.cached_content_token_count}")
@@ -129,7 +111,6 @@ def _print_telemetry(
   print(f"  Total tokens:    {cumul.total_token_count}")
 
   # Trajectory summary.
-  history = conversation.history
   print(f"\n--- Trajectory ({len(history)} steps) ---")
   for i, s in enumerate(history):
     label = f"    [{i}] {s.type.value} ({s.source.value}) - {s.status.value}"
@@ -142,38 +123,21 @@ def _print_telemetry(
 
 async def run():
   """Runs the example."""
-  strategy = None
-  mcp_bridge = None
   try:
-    # McpBridge connects to a separate MCP server process over stdio.
-    mcp_bridge = McpBridge()
+
     mcp_server_path = os.path.join(
         os.path.dirname(__file__), "mcp_server.par"
     )
-    await mcp_bridge.connect_stdio(mcp_server_path, ["--transport=stdio"])
-    logging.info("MCP server connected (pirate math tools available).")
 
-    # All tools available to the model (either in-process Python functions or
-    # MCP) are registered in the ToolRunner.
-    tool_runner = ToolRunner(tools=[read_file_upside_down] + mcp_bridge.tools)
-
-    hr = hooks_runner.HookRunner()
-    hr.register_hook(
-        policy.enforce([policy.ask_user("*", handler=cli.ask_user_handler)])
-    )
-    hr.register_hook(cli.AskQuestionHook())
-
-    # Initialize LocalConnectionStrategy with ToolRunner and binary path
-    strategy = LocalConnectionStrategy(
-        tool_runner=tool_runner,
-        hook_runner=hr,
-        gemini_config=types.GeminiConfig(
-            models=types.ModelConfig(
-                default=types.ModelEntry(name=_MODEL_NAME.value),
-            ),
-        ),
-        system_instructions=_SYSTEM_INSTRUCTION.value,
-        capabilities_config=types.CapabilitiesConfig(
+    config = LocalAgentConfig(
+        tools=[read_file_upside_down],
+        mcp_servers=[types.McpStdioServer(
+            command=mcp_server_path,
+            args=["--transport=stdio"],
+        )],
+        policies=[policy.ask_user("*", handler=cli.ask_user_handler)],
+        hooks=[cli.AskQuestionHook()],
+        capabilities=types.CapabilitiesConfig(
             disabled_tools=(
                 [types.BuiltinTools.RUN_COMMAND]
                 if _DISABLE_RUN_COMMAND.value
@@ -181,10 +145,15 @@ async def run():
             ),
         ),
     )
+    config.gemini_config = types.GeminiConfig(
+        models=types.ModelConfig(
+            default=types.ModelEntry(name=_MODEL_NAME.value),
+        ),
+    )
+    config.system_instructions = _SYSTEM_INSTRUCTION.value
 
-    # Create Conversation
-    logging.info("Starting connection and creating conversation...")
-    async with Conversation.create(strategy) as conversation:
+    logging.info("Starting agent...")
+    async with Agent(config) as agent:
 
       cli_utils.print_cli_header("Antigravity SDK Demo")
 
@@ -198,20 +167,21 @@ async def run():
             print(cli_utils.GOODBYE_MSG)
             break
 
-          await conversation.send(user_input)
+          response = await agent.chat(user_input)
 
-          steps_this_turn = []
-          try:
-            async for step in conversation.receive_steps():
-              steps_this_turn.append(step)
-              if step.is_complete_response:
-                print(f"\n{step.content}\n")
-          except asyncio.CancelledError:
-            print("\nCanceling current request...")
-            await conversation.cancel()
+          # Stream the response to stdout
+          async for chunk in response:
+            sys.stdout.write(chunk)
+            sys.stdout.flush()
+          print()
 
           if _SHOW_USAGE.value:
-            _print_telemetry(steps_this_turn, conversation)
+            assert agent._conversation is not None
+            _print_telemetry(
+                response.usage_metadata,
+                agent.total_usage,
+                agent._conversation.history,
+            )
 
         except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
           print(cli_utils.GOODBYE_MSG)
@@ -220,10 +190,6 @@ async def run():
   except Exception as e:  # pylint: disable=broad-exception-caught
     print(f"An error occurred: {e}", file=sys.stderr)
     logging.exception("Error running example: %s", e)
-  finally:
-    if mcp_bridge is not None:
-      logging.info("Stopping McpBridge...")
-      await mcp_bridge.stop()
 
   # asyncio.to_thread(input) spawns a thread that blocks on stdin. This thread
   # cannot be interrupted in CPython, so asyncio.run() will hang during executor

@@ -18,6 +18,7 @@ import argparse
 import asyncio
 import logging
 import os
+import sys
 from google.antigravity import types
 from google.antigravity.agent import Agent
 from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
@@ -135,14 +136,12 @@ async def main():
   )
   async with Agent(config) as agent:
 
-    print(f"\nSending prompt: {args.prompt}")
-    assert agent._conversation is not None
-    await agent._conversation.send(args.prompt)
-
     print("\nStreaming agent output:")
-    async for step in agent._conversation.receive_steps():
-      if step.is_complete_response:
-        print(f"\nAgent: {step.content}")
+    response = await agent.chat(args.prompt)
+    async for chunk in response:
+      sys.stdout.write(chunk)
+      sys.stdout.flush()
+    print()
 
 
 if __name__ == "__main__":

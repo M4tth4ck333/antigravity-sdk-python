@@ -64,8 +64,8 @@ from absl import app
 from absl import logging
 
 from google.antigravity import types
-from google.antigravity.connections.local.local_connection import LocalConnectionStrategy
-from google.antigravity.conversation.conversation import Conversation
+from google.antigravity.agent import Agent
+from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
 from google.antigravity.hooks import hook_runner as hooks_runner
 from google.antigravity.hooks import hooks
 from google.antigravity.tools.tool_runner import ToolRunner
@@ -193,13 +193,14 @@ def broken_tool() -> str:
 # =============================================================================
 
 
-async def run_prompt(conversation: Conversation, prompt: str) -> None:
+async def run_prompt(agent: Agent, prompt: str) -> None:
   """Sends a prompt and prints the final response."""
   print(f"\n{'='*60}")
   print(f"--- Sending: {prompt!r} ---")
   print(f"{'='*60}")
-  await conversation.send(prompt)
-  async for step in conversation.receive_steps():
+  assert agent._conversation is not None
+  await agent._conversation.send(prompt)
+  async for step in agent._conversation.receive_steps():
     if step.is_complete_response:
       cascade_id = getattr(step, "cascade_id", "")
       trajectory_id = getattr(step, "trajectory_id", "")
@@ -215,52 +216,44 @@ async def run_prompt(conversation: Conversation, prompt: str) -> None:
 
 async def run():
   """Runs the lifecycle hooks example."""
-  # Build the HookRunner with every supported hook registered.
-  hr = hooks_runner.HookRunner(
-      on_session_start_hooks=[log_session_start],
-      on_session_end_hooks=[log_session_end],
-      pre_turn_hooks=[log_pre_turn],
-      post_turn_hooks=[log_post_turn],
-      pre_tool_call_decide_hooks=[
+  config = LocalAgentConfig(
+      hooks=[
+          log_session_start,
+          log_session_end,
+          log_pre_turn,
+          log_post_turn,
           log_pre_tool_call_decide,
           log_pre_subagent_call,
-      ],
-      post_tool_call_hooks=[
           log_post_tool_call,
           log_post_subagent_call,
+          log_tool_error,
+          log_compaction,
+          log_interaction,
       ],
-      on_tool_error_hooks=[log_tool_error],
-      on_compaction_hooks=[log_compaction],
-      on_interaction_hooks=[log_interaction],
-  )
-
-  tool_runner = ToolRunner(tools=[greet, broken_tool])
-
-  strategy = LocalConnectionStrategy(
-      tool_runner=tool_runner,
-      hook_runner=hr,
-      gemini_config=types.GeminiConfig(),
-      capabilities_config=types.CapabilitiesConfig(
+      tools=[greet, broken_tool],
+      capabilities=types.CapabilitiesConfig(
           enable_subagents=True,
       ),
   )
+  config.gemini_config = types.GeminiConfig()
 
-  async with Conversation.create(strategy) as conversation:
+  logging.info("Starting agent...")
+  async with Agent(config) as agent:
     # 1. Tool hooks: greet triggers pre/post tool call.
-    await run_prompt(conversation, "Please greet Alice using the greet tool.")
+    await run_prompt(agent, "Please greet Alice using the greet tool.")
 
     # 2. Tool error hook: broken_tool always raises.
-    await run_prompt(conversation, "Please call the broken_tool tool.")
+    await run_prompt(agent, "Please call the broken_tool tool.")
 
     # 3. Interaction hook: ask_question triggers OnInteraction.
     await run_prompt(
-        conversation,
+        agent,
         "Ask me a multiple-choice trivia question.",
     )
 
     # 4. Subagent hooks: invoke_subagent triggers pre/post subagent.
     await run_prompt(
-        conversation,
+        agent,
         "Invoke a subagent to write a short poem about nature.",
     )
 

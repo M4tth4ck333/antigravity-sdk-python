@@ -36,8 +36,8 @@ from absl import flags
 from absl import logging
 
 from google.antigravity import types
-from google.antigravity.connections.local.local_connection import LocalConnectionStrategy
-from google.antigravity.conversation.conversation import Conversation
+from google.antigravity.agent import Agent
+from google.antigravity.connections.local.local_connection_config import LocalAgentConfig
 from google.antigravity.utils import cli_utils
 
 _MODEL_NAME = flags.DEFINE_string(
@@ -54,28 +54,28 @@ _THINKING_LEVEL = flags.DEFINE_enum_class(
 async def run():
   """Runs the thinking example."""
   try:
-    strategy = LocalConnectionStrategy(
-        gemini_config=types.GeminiConfig(
-            models=types.ModelConfig(
-                default=types.ModelEntry(
-                    name=_MODEL_NAME.value,
-                    generation=types.GenerationConfig(
-                        thinking_level=_THINKING_LEVEL.value,
-                    ),
+    config = LocalAgentConfig(
+        capabilities=types.CapabilitiesConfig(
+            enabled_tools=types.BuiltinTools.read_only(),
+        ),
+    )
+    config.gemini_config = types.GeminiConfig(
+        models=types.ModelConfig(
+            default=types.ModelEntry(
+                name=_MODEL_NAME.value,
+                generation=types.GenerationConfig(
+                    thinking_level=_THINKING_LEVEL.value,
                 ),
             ),
-        ),
-        capabilities_config=types.CapabilitiesConfig(
-            disabled_tools=[types.BuiltinTools.RUN_COMMAND],
         ),
     )
 
     logging.info(
-        "Starting connection (model: %s, thinking: %s)...",
+        "Starting agent (model: %s, thinking: %s)...",
         _MODEL_NAME.value,
         _THINKING_LEVEL.value,
     )
-    async with Conversation.create(strategy) as conversation:
+    async with Agent(config) as agent:
 
       cli_utils.print_cli_header("Thinking Example")
       print("Ask a question to see the model's reasoning process.\n")
@@ -90,17 +90,17 @@ async def run():
             print(cli_utils.GOODBYE_MSG)
             break
 
-          await conversation.send(user_input)
+          response = await agent.chat(user_input)
 
-          try:
-            async for step in conversation.receive_steps():
-              if step.thinking:
-                print(f"\n  💭 Thinking: {step.thinking}")
-              if step.is_complete_response:
-                print(f"\n  💬 Response: {step.content}\n")
-          except asyncio.CancelledError:
-            print("\nCanceling current request...")
-            await conversation.cancel()
+          print("\n  💭 Thinking: ", end="", flush=True)
+          async for thought in response.thoughts:
+            print(thought, end="", flush=True)
+          print()
+
+          print("  💬 Response: ", end="", flush=True)
+          async for chunk in response:
+            print(chunk, end="", flush=True)
+          print("\n")
 
         except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
           print(cli_utils.GOODBYE_MSG)
