@@ -880,6 +880,44 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     except asyncio.TimeoutError:
       self.fail("wait_for_idle deadlocked!")
 
+  async def test_concurrent_receive_steps_raises_runtime_error(self):
+    """Verifies that concurrent receive_steps() calls raise RuntimeError.
+
+    This test ensures that the SDK prevents multiple consumers from iterating
+    over receive_steps() simultaneously. Because steps are drained from a
+    single FIFO queue, concurrent iterations would steal steps from one
+    another and corrupt conversation history. The active reader guard
+    guarantees that a second consumer fails fast with an explicit exception.
+    """
+    harness = self._make_harness()
+    harness.conn._is_idle.clear()
+
+    async def consume_partially() -> None:
+      async for _ in harness.conn.receive_steps():
+        break
+
+    # Start first consumer in a background task
+    consumer_task = asyncio.create_task(consume_partially())
+    await asyncio.sleep(0.05)
+
+    # Attempting to start second consumer concurrently raises RuntimeError
+    with self.assertRaisesRegex(
+        RuntimeError, r"Concurrent receive_steps\(\) calls are not supported"
+    ):
+      async for _ in harness.conn.receive_steps():
+        pass
+
+    # Clean up background task
+    await harness.send_event(
+        localharness_pb2.OutputEvent(
+            trajectory_state_update=localharness_pb2.TrajectoryStateUpdate(
+                trajectory_id="traj_1",
+                state=localharness_pb2.TrajectoryStateUpdate.STATE_IDLE,
+            )
+        )
+    )
+    await asyncio.wait_for(consumer_task, timeout=1.0)
+
 
 class LocalConnectionStepFromDictTest(unittest.TestCase):
   """Tests for LocalConnectionStep.from_dict derivation logic.

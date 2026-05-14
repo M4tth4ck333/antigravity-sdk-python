@@ -435,6 +435,7 @@ class LocalConnection(connection.Connection):
     # error messages when the WebSocket closes unexpectedly.
     self._stderr_lines: collections.deque[str] = collections.deque(maxlen=100)
     self._stderr_thread: threading.Thread | None = None
+    self._is_receiving: bool = False
 
     # Tracks builtin tool calls that were approved via ToolConfirmation,
     # keyed by (trajectory_id, step_index). When the step transitions to
@@ -492,56 +493,65 @@ class LocalConnection(connection.Connection):
 
   async def receive_steps(self) -> AsyncIterator[LocalConnectionStep]:
     """Receives steps as they complete from the agent."""
-    if self._cancelled:
-      yield LocalConnectionStep(
-          status=types.StepStatus.CANCELED,
-          error=self._cancelled_message,
-          source=types.StepSource.SYSTEM,
-          type=types.StepType.SYSTEM_MESSAGE,
+    if self._is_receiving:
+      raise RuntimeError(
+          "Concurrent receive_steps() calls are not supported on this"
+          " connection."
       )
-      return
+    self._is_receiving = True
+    try:
+      if self._cancelled:
+        yield LocalConnectionStep(
+            status=types.StepStatus.CANCELED,
+            error=self._cancelled_message,
+            source=types.StepSource.SYSTEM,
+            type=types.StepType.SYSTEM_MESSAGE,
+        )
+        return
 
-    if self._is_idle.is_set() and self._step_queue.empty():
-      return
-
-    # The server sends a STATE_IDLE signal when the trajectory is finalized,
-    # but it may arrive before we've consumed all queued steps (the reader
-    # loop and this generator run concurrently). We check idle + empty as
-    # the exit condition and block on get() otherwise.
-    while True:
       if self._is_idle.is_set() and self._step_queue.empty():
         return
 
-      step_obj = await self._step_queue.get()
+      # The server sends a STATE_IDLE signal when the trajectory is finalized,
+      # but it may arrive before we've consumed all queued steps (the reader
+      # loop and this generator run concurrently). We check idle + empty as
+      # the exit condition and block on get() otherwise.
+      while True:
+        if self._is_idle.is_set() and self._step_queue.empty():
+          return
 
-      if step_obj is _IDLE_SENTINEL:
-        continue
-      if step_obj is None:
-        return
-      if isinstance(step_obj, Exception):
-        raise step_obj
+        step_obj = await self._step_queue.get()
 
-      step_obj = cast(LocalConnectionStep, step_obj)
-      yield step_obj
+        if step_obj is _IDLE_SENTINEL:
+          continue
+        if step_obj is None:
+          return
+        if isinstance(step_obj, Exception):
+          raise step_obj
 
-      is_from_model = step_obj.source == types.StepSource.MODEL
-      is_done = step_obj.status == types.StepStatus.DONE
-      is_terminal = is_done or step_obj.status in (
-          types.StepStatus.ERROR,
-          types.StepStatus.CANCELED,
-      )
-      is_target_user = getattr(step_obj, "target", None) == "TARGET_USER"
+        step_obj = cast(LocalConnectionStep, step_obj)
+        yield step_obj
 
-      if is_terminal and is_target_user and is_from_model:
-        # Dispatch post-turn hook with the final response content.
-        if self._hook_runner and self._current_turn_context:
-          await self._hook_runner.dispatch_post_turn(
-              self._current_turn_context, step_obj.content or ""
-          )
-          self._current_turn_context = None
-        # Don't force idle here — wait for the TrajectoryStateUpdate
-        # path to confirm that the parent and all subagent trajectories
-        # have completed.
+        is_from_model = step_obj.source == types.StepSource.MODEL
+        is_done = step_obj.status == types.StepStatus.DONE
+        is_terminal = is_done or step_obj.status in (
+            types.StepStatus.ERROR,
+            types.StepStatus.CANCELED,
+        )
+        is_target_user = getattr(step_obj, "target", None) == "TARGET_USER"
+
+        if is_terminal and is_target_user and is_from_model:
+          # Dispatch post-turn hook with the final response content.
+          if self._hook_runner and self._current_turn_context:
+            await self._hook_runner.dispatch_post_turn(
+                self._current_turn_context, step_obj.content or ""
+            )
+            self._current_turn_context = None
+          # Don't force idle here — wait for the TrajectoryStateUpdate
+          # path to confirm that the parent and all subagent trajectories
+          # have completed.
+    finally:
+      self._is_receiving = False
 
   async def wait_for_idle(self) -> None:
     """Blocks until the connection becomes idle."""
