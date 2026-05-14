@@ -94,7 +94,10 @@ async with Conversation.create(strategy) as conversation:
 async with Conversation.create(strategy) as conversation:
     await conversation.send("Tell me a story.")
     async for step in conversation.receive_steps():
-        if step.type == types.StepType.MODEL_RESPONSE:
+        if (
+            step.source == types.StepSource.MODEL
+            and step.type == types.StepType.TEXT_RESPONSE
+        ):
             print(step.content, end="")
 ```
 

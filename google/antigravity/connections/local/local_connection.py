@@ -256,7 +256,7 @@ class LocalConnectionStep(types.Step):
     ):
       step_type = types.StepType.TOOL_CALL
     elif step_dict.get("text"):
-      step_type = types.StepType.MODEL_RESPONSE
+      step_type = types.StepType.TEXT_RESPONSE
 
     source_str = step_dict.get("source")
     source = _SOURCE_MAP.get(source_str, types.StepSource.UNKNOWN)

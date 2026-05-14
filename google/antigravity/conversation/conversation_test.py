@@ -30,7 +30,7 @@ def _make_step(
     content: str = "",
     *,
     step_index: int = 0,
-    step_type: types.StepType = types.StepType.MODEL_RESPONSE,
+    step_type: types.StepType = types.StepType.TEXT_RESPONSE,
     source: types.StepSource = types.StepSource.MODEL,
     status: types.StepStatus = types.StepStatus.DONE,
     is_final: bool = False,
@@ -796,7 +796,7 @@ class ConversationUsageMetadataTest(unittest.IsolatedAsyncioTestCase):
     return types.Step(
         id=str(step_index),
         step_index=step_index,
-        type=types.StepType.MODEL_RESPONSE,
+        type=types.StepType.TEXT_RESPONSE,
         source=types.StepSource.MODEL,
         status=types.StepStatus.DONE,
         content="",

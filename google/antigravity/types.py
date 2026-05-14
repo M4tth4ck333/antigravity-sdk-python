@@ -485,7 +485,7 @@ class UsageMetadata(pydantic.BaseModel):
 class StepType(str, enum.Enum):
   """High-level type of a step."""
 
-  MODEL_RESPONSE = "MODEL_RESPONSE"
+  TEXT_RESPONSE = "TEXT_RESPONSE"
   TOOL_CALL = "TOOL_CALL"
   SYSTEM_MESSAGE = "SYSTEM_MESSAGE"
   COMPACTION = "COMPACTION"
