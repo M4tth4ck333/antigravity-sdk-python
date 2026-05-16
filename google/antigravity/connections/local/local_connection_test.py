@@ -1632,6 +1632,16 @@ class LocalConnectionStrategyConfigTest(unittest.TestCase):
     # verify storage.
     self.assertEqual(strategy._save_dir, "/state/dir")
 
+  def test_app_data_dir_specified(self):
+    strategy = self._make_strategy(app_data_dir="/custom/app/data")
+    config = strategy._build_harness_config()
+    self.assertEqual(config.app_data_dir, "/custom/app/data")
+
+  def test_app_data_dir_default_empty(self):
+    strategy = self._make_strategy()
+    config = strategy._build_harness_config()
+    self.assertEqual(config.app_data_dir, "")
+
 
 class LocalConnectionStrategyApiKeyTest(unittest.IsolatedAsyncioTestCase):
   """Tests for API key validation in LocalConnectionStrategy."""
@@ -3124,8 +3134,12 @@ class LocalAgentConfigTest(unittest.TestCase):
         model="gemini-2.5-pro",
     )
 
-    mock_tool_runner = mock.MagicMock()
-    mock_hook_runner = mock.MagicMock()
+    mock_tool_runner = mock.create_autospec(
+        tool_runner.ToolRunner, instance=True
+    )
+    mock_hook_runner = mock.create_autospec(
+        hook_runner.HookRunner, instance=True
+    )
 
     strategy = config.create_strategy(
         tool_runner=mock_tool_runner,
@@ -3148,6 +3162,34 @@ class LocalAgentConfigTest(unittest.TestCase):
     p = config.policies[0]
     self.assertEqual(p.tool, "*")
     self.assertEqual(p.decision, policy.Decision.APPROVE)
+
+  def test_create_strategy_app_data_dir(self):
+    config = local_connection_config.LocalAgentConfig(
+        system_instructions="test instructions",
+        app_data_dir="/foo/bar",
+    )
+
+    mock_tool_runner = mock.create_autospec(
+        tool_runner.ToolRunner, instance=True
+    )
+    mock_hook_runner = mock.create_autospec(
+        hook_runner.HookRunner, instance=True
+    )
+
+    strategy = config.create_strategy(
+        tool_runner=mock_tool_runner,
+        hook_runner=mock_hook_runner,
+    )
+
+    self.assertIsInstance(strategy, local_connection.LocalConnectionStrategy)
+    self.assertEqual(strategy._app_data_dir, "/foo/bar")
+
+  def test_app_data_dir_relative_path_raises(self):
+    with self.assertRaises(pydantic.ValidationError):
+      local_connection_config.LocalAgentConfig(
+          system_instructions="test",
+          app_data_dir="relative/path",
+      )
 
 
 class LocalConnectionBuiltinToolHooksTest(unittest.IsolatedAsyncioTestCase):

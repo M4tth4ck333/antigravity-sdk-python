@@ -55,6 +55,7 @@ class AgentConfig(abc.ABC, pydantic.BaseModel):
   workspaces: list[str] = pydantic.Field(default_factory=list)
   conversation_id: str | None = None
   save_dir: str | None = None
+  app_data_dir: str | None = None
   response_schema: dict[str, Any] | type[pydantic.BaseModel] | str | None = None
   skills_paths: list[str] = pydantic.Field(default_factory=list)
 

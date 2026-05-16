@@ -1290,6 +1290,7 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
       conversation_id: str | None = None,
       save_dir: str | None = None,
       workspaces: list[str] | None = None,
+      app_data_dir: str | None = None,
   ):
     self._binary_path = _get_default_binary_path()
     self._tool_runner = tool_runner
@@ -1317,6 +1318,7 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
     self._conversation_id = conversation_id
     self._save_dir = save_dir
     self._workspaces = workspaces or []
+    self._app_data_dir = app_data_dir
 
   def _build_harness_config(self) -> localharness_pb2.HarnessConfig:
     """Translates Pydantic config objects into a HarnessConfig proto."""
@@ -1433,6 +1435,7 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
         # 0 tells the harness to use its default (50000 tokens).
         compaction_threshold=cfg.compaction_threshold or 0,
         finish_tool_schema_json=cfg.finish_tool_schema_json or "",
+        app_data_dir=self._app_data_dir or "",
     )
 
     return harness_config

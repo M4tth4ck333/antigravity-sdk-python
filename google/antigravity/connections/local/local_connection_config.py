@@ -15,6 +15,7 @@
 """Configuration for the local harness connection strategy."""
 
 import logging
+import os
 import tempfile
 from typing import Any
 
@@ -49,6 +50,12 @@ class LocalAgentConfig(connection.AgentConfig):
   # Top-level shorthand fields — flow into gemini_config.
   model: str | None = None
   api_key: str | None = None
+
+  @pydantic.field_validator("app_data_dir")
+  def _validate_app_data_dir(cls, v: str | None) -> str | None:
+    if v is not None and not os.path.isabs(v):
+      raise ValueError(f"app_data_dir must be an absolute path, got '{v}'")
+    return v
 
   @pydantic.model_validator(mode="after")
   def _apply_shorthand_configs(self) -> "LocalAgentConfig":
@@ -105,5 +112,6 @@ class LocalAgentConfig(connection.AgentConfig):
         conversation_id=self.conversation_id,
         save_dir=save_dir,
         workspaces=self.workspaces,
+        app_data_dir=self.app_data_dir,
         skills_paths=self.skills_paths,
     )
