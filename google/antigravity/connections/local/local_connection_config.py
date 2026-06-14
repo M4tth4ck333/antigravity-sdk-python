@@ -45,6 +45,10 @@ class LocalAgentConfig(connection.AgentConfig):
   restricted to those directories via ``policy.workspace_only()``.
   """
 
+  model_config = pydantic.ConfigDict(
+      arbitrary_types_allowed=True, validate_assignment=True
+  )
+
   capabilities: types.CapabilitiesConfig = pydantic.Field(
       default_factory=types.CapabilitiesConfig
   )
@@ -54,11 +58,13 @@ class LocalAgentConfig(connection.AgentConfig):
   workspaces: list[str] = pydantic.Field(default_factory=lambda: [os.getcwd()])
 
   gemini_config: types.GeminiConfig = pydantic.Field(
-      default_factory=types.GeminiConfig
+      default_factory=types.GeminiConfig,
+      deprecated="gemini_config is deprecated; use the 'models' field instead.",
   )
 
   # Top-level shorthand fields — flow into gemini_config.
-  model: str | None = None
+  model: str | types.ModelTarget | None = None
+  models: list[types.ModelTarget] | None = None
   api_key: str | None = None
   vertex: bool | None = None
   project: str | None = None
@@ -83,7 +89,8 @@ class LocalAgentConfig(connection.AgentConfig):
       ) = None,
       skills_paths: list[str] | None = None,
       gemini_config: types.GeminiConfig | None = None,
-      model: str | None = None,
+      model: str | types.ModelTarget | None = None,
+      models: list[types.ModelTarget] | None = None,
       api_key: str | None = None,
       vertex: bool | None = None,
       project: str | None = None,
@@ -108,8 +115,36 @@ class LocalAgentConfig(connection.AgentConfig):
   @pydantic.model_validator(mode="after")
   def _apply_shorthand_configs(self) -> "LocalAgentConfig":
     """Applies top-level shorthand fields (model, api_key) to gemini_config."""
-    # Defensive copy: prevent mutation of shared GeminiConfig instances.
-    self.gemini_config = self.gemini_config.model_copy(deep=True)
+    self.__dict__["gemini_config"] = self.gemini_config.model_copy(deep=True)
+
+    if self.models is not None:
+      if (
+          self.model is not None
+          or self.api_key is not None
+          or self.vertex is not None
+          or self.project is not None
+          or self.location is not None
+      ):
+        raise ValueError(
+            "Cannot set both the new 'models' list and the legacy shorthand"
+            " fields (model, api_key, vertex, project, location)."
+        )
+
+      text_model = next(
+          (m for m in self.models if types.ModelType.TEXT in m.types),
+          self.models[0] if self.models else None,
+      )
+      if text_model:
+        if isinstance(text_model.endpoint, types.VertexEndpoint):
+          self.gemini_config.vertex = True
+          self.gemini_config.project = text_model.endpoint.project
+          self.gemini_config.location = text_model.endpoint.location
+        elif isinstance(text_model.endpoint, types.GeminiAPIEndpoint):
+          self.gemini_config.api_key = text_model.endpoint.api_key
+        self.gemini_config.models.default = types.ModelEntry(
+            name=text_model.name or types.DEFAULT_MODEL
+        )
+      return self
 
     if self.model is not None:
       if "default" in self.gemini_config.models.model_fields_set:
@@ -117,7 +152,13 @@ class LocalAgentConfig(connection.AgentConfig):
             "Cannot set both 'model' shorthand and "
             "'gemini_config.models.default'. Use one or the other."
         )
-      self.gemini_config.models.default = types.ModelEntry(name=self.model)
+      model_name = (
+          self.model.name
+          if isinstance(self.model, types.ModelTarget)
+          else self.model
+      )
+      if model_name:
+        self.gemini_config.models.default = types.ModelEntry(name=model_name)
     if self.api_key is not None:
       if self.gemini_config.api_key is not None:
         raise ValueError(
@@ -147,7 +188,9 @@ class LocalAgentConfig(connection.AgentConfig):
       resolved_app_data_dir = pathlib.Path(app_data_path).expanduser().resolve()
       allowed_paths = [*self.workspaces, str(resolved_app_data_dir)]
 
-      self.policies = policy.workspace_only(allowed_paths) + self.policies
+      self.__dict__["policies"] = (
+          policy.workspace_only(allowed_paths) + self.policies
+      )
     return self
 
   def _get_system_instructions(self) -> types.SystemInstructions | None:

@@ -1466,12 +1466,7 @@ class LocalConnectionStrategyConfigTest(parameterized.TestCase):
     return local_connection.LocalConnectionStrategy(**kwargs)
 
   def test_default_config_produces_valid_harness_config(self):
-    """Verifies that a strategy with all defaults produces a well-formed proto.
-
-    Why: The default path is the most common case. Callers should be able to
-    construct a strategy with only binary_path and get a valid HarnessConfig.
-    How: Build the config and assert the proto has expected default structure.
-    """
+    """Verifies that a strategy with defaults produces a well-formed proto."""
     strategy = self._make_strategy()
     config = strategy._build_harness_config()
     self.assertIsInstance(config, localharness_pb2.HarnessConfig)
@@ -1481,11 +1476,109 @@ class LocalConnectionStrategyConfigTest(parameterized.TestCase):
     self.assertTrue(config.harness_side_tools.run_command.enabled)
     self.assertTrue(config.harness_side_tools.find.enabled)
     self.assertTrue(config.harness_side_tools.generate_image.enabled)
-    # No gemini config, system instructions, workspaces, or skills by default.
+    # Model config should be empty because we did not specify one.
     self.assertFalse(config.HasField("gemini_config"))
+    self.assertFalse(config.HasField("gemma_config"))
+    self.assertFalse(config.HasField("custom_backend"))
+    # No system instructions, workspaces, or skills by default.
     self.assertFalse(config.HasField("system_instructions"))
     self.assertEqual(len(config.workspaces), 0)
     self.assertEqual(len(config.skills_paths), 0)
+
+  def test_legacy_gemini_config_produces_valid_proto(self):
+    """Verifies that the legacy gemini_config translates to gemini_config proto."""
+    legacy_config = types.GeminiConfig(
+        api_key="legacy-key",
+        models=types.ModelConfig(
+            default="gemini-2.5-pro",
+        )
+    )
+    # We construct LocalAgentConfig with gemini_config
+    cfg = local_connection_config.LocalAgentConfig(gemini_config=legacy_config)
+    strategy = self._make_strategy(
+        gemini_config=cfg.gemini_config,
+    )
+    config = strategy._build_harness_config()
+    self.assertTrue(config.HasField("gemini_config"))
+    self.assertEqual(config.gemini_config.api_key, "legacy-key")
+    self.assertEqual(config.gemini_config.model_name, "gemini-2.5-pro")
+
+  def test_legacy_shorthands_api_key_produces_valid_proto(self):
+    """Verifies that the legacy api_key shorthand translates to gemini_config proto."""
+    cfg = local_connection_config.LocalAgentConfig(
+        model="gemini-2.5-flash",
+        api_key="shorthand-key",
+    )
+    strategy = self._make_strategy(
+        gemini_config=cfg.gemini_config,
+    )
+    config = strategy._build_harness_config()
+    self.assertTrue(config.HasField("gemini_config"))
+    self.assertEqual(config.gemini_config.api_key, "shorthand-key")
+    self.assertEqual(config.gemini_config.model_name, "gemini-2.5-flash")
+    self.assertFalse(config.gemini_config.use_vertex)
+
+  def test_legacy_shorthands_vertex_produces_valid_proto(self):
+    """Verifies that the legacy vertex shorthands translate to gemini_config proto."""
+    cfg = local_connection_config.LocalAgentConfig(
+        model="gemini-2.5-flash",
+        vertex=True,
+        project="vertex-project",
+        location="us-east4",
+    )
+    strategy = self._make_strategy(
+        gemini_config=cfg.gemini_config,
+    )
+    config = strategy._build_harness_config()
+    self.assertTrue(config.HasField("gemini_config"))
+    self.assertEqual(config.gemini_config.model_name, "gemini-2.5-flash")
+    self.assertTrue(config.gemini_config.use_vertex)
+    self.assertEqual(config.gemini_config.project, "vertex-project")
+    self.assertEqual(config.gemini_config.location, "us-east4")
+
+  def test_models_list_gemini_api_endpoint_propagates(self):
+    """Verifies that the new models list with GeminiAPIEndpoint translates to gemini_config proto."""
+    cfg = local_connection_config.LocalAgentConfig(
+        models=[
+            types.ModelTarget(
+                name="gemini-2.5-flash",
+                types=[types.ModelType.TEXT],
+                endpoint=types.GeminiAPIEndpoint(api_key="models-api-key"),
+            )
+        ]
+    )
+    strategy = self._make_strategy(
+        gemini_config=cfg.gemini_config,
+    )
+    config = strategy._build_harness_config()
+    self.assertTrue(config.HasField("gemini_config"))
+    self.assertEqual(config.gemini_config.api_key, "models-api-key")
+    self.assertEqual(config.gemini_config.model_name, "gemini-2.5-flash")
+    self.assertFalse(config.gemini_config.use_vertex)
+
+  def test_models_list_vertex_endpoint_propagates(self):
+    """Verifies that the new models list with VertexEndpoint translates to gemini_config proto."""
+    cfg = local_connection_config.LocalAgentConfig(
+        models=[
+            types.ModelTarget(
+                name="gemini-2.5-flash",
+                types=[types.ModelType.TEXT],
+                endpoint=types.VertexEndpoint(
+                    project="models-proj",
+                    location="models-loc",
+                ),
+            )
+        ]
+    )
+    strategy = self._make_strategy(
+        gemini_config=cfg.gemini_config,
+    )
+    config = strategy._build_harness_config()
+    self.assertTrue(config.HasField("gemini_config"))
+    self.assertTrue(config.gemini_config.use_vertex)
+    self.assertEqual(config.gemini_config.project, "models-proj")
+    self.assertEqual(config.gemini_config.location, "models-loc")
+    self.assertEqual(config.gemini_config.model_name, "gemini-2.5-flash")
 
   def test_capabilities_config_finish_tool_schema_json_to_proto(self):
     """Verifies capabilities config propagates finish tool schema to the proto config.
@@ -1530,28 +1623,13 @@ class LocalConnectionStrategyConfigTest(parameterized.TestCase):
     """
     strategy = self._make_strategy(gemini_config=types.GeminiConfig())
     config = strategy._build_harness_config()
-    self.assertEqual(config.gemini_config.model_name, "gemini-3.5-flash")
-    # api_key should not be set (proto default empty string).
-    self.assertEqual(config.gemini_config.api_key, "")
+    self.assertFalse(config.gemini_config.HasField("api_key"))
 
   def test_gemini_config_default_model_name(self):
-    """Verifies the default model name propagates correctly.
-
-    Why: The default model name is a critical fallback; if it changes
-    unintentionally, agents would use the wrong model.
-    How: Create default GeminiConfig and check model_name in proto.
-    """
+    """Verifies the default model name propagates correctly."""
     strategy = self._make_strategy(gemini_config=types.GeminiConfig())
     config = strategy._build_harness_config()
     self.assertEqual(config.gemini_config.model_name, "gemini-3.5-flash")
-
-  def test_gemini_config_string_shorthand(self):
-    """Verifies that a bare model name string creates a proper GeminiConfig."""
-    strategy = self._make_strategy(gemini_config="custom-model-name")
-    config = strategy._build_harness_config()
-    self.assertEqual(config.gemini_config.model_name, "custom-model-name")
-    # No API key set in shorthand path.
-    self.assertEqual(config.gemini_config.api_key, "")
 
   def test_system_instructions_string_shorthand(self):
     """Verifies that a plain string normalizes to AppendedSystemInstructions.
@@ -3601,7 +3679,7 @@ class LocalConnectionSendTest(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(followup_msg.get("userInput"), "follow-up prompt")
 
 
-class LocalAgentConfigTest(unittest.TestCase):
+class LocalAgentConfigTest(absltest.TestCase):
 
   def test_create_strategy(self):
     config = local_connection_config.LocalAgentConfig(
@@ -3665,7 +3743,7 @@ class LocalAgentConfigTest(unittest.TestCase):
     self.assertIsNone(config.capabilities.enabled_tools)
     self.assertIsNone(config.capabilities.disabled_tools)
     # confirm_run_command() produces 2 policies: deny(run_command) + allow(*)
-    self.assertEqual(len(config.policies), 2)
+    self.assertLen(config.policies, 2)
     deny_policy = config.policies[0]
     self.assertEqual(deny_policy.tool, "run_command")
     self.assertEqual(deny_policy.decision, policy.Decision.DENY)
@@ -3682,7 +3760,7 @@ class LocalAgentConfigTest(unittest.TestCase):
     self.assertEqual(config.workspaces, [os.getcwd()])
     # workspace_only produces 3 deny policies (view_file, create_file,
     # edit_file), followed by the 2 confirm_run_command policies.
-    self.assertEqual(len(config.policies), 5)
+    self.assertLen(config.policies, 5)
     for i in range(3):
       self.assertEqual(config.policies[i].decision, policy.Decision.DENY)
       self.assertEqual(config.policies[i].name, "workspace_only")
@@ -3697,7 +3775,7 @@ class LocalAgentConfigTest(unittest.TestCase):
     )
     # workspace_only produces 3 deny policies (view_file, create_file,
     # edit_file), followed by the 2 confirm_run_command policies.
-    self.assertEqual(len(config.policies), 5)
+    self.assertLen(config.policies, 5)
     # First 3 should be workspace_only deny policies for file tools.
     for i in range(3):
       self.assertEqual(config.policies[i].decision, policy.Decision.DENY)
@@ -3713,7 +3791,7 @@ class LocalAgentConfigTest(unittest.TestCase):
         policies=[policy.allow_all()],
         workspaces=[],
     )
-    self.assertEqual(len(config.policies), 1)
+    self.assertLen(config.policies, 1)
     self.assertEqual(config.policies[0].tool, "*")
     self.assertEqual(config.policies[0].decision, policy.Decision.APPROVE)
 
@@ -3775,7 +3853,7 @@ class LocalAgentConfigTest(unittest.TestCase):
 
     harness_pb = strategy._build_harness_config()
 
-    self.assertEqual(len(harness_pb.mcp_servers), 2)
+    self.assertLen(harness_pb.mcp_servers, 2)
 
     stdio_pb = harness_pb.mcp_servers[0]
     self.assertEqual(stdio_pb.name, "my-stdio")

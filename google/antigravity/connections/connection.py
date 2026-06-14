@@ -24,9 +24,10 @@ backend type and how to tear it down.
 
 import abc
 import json
-from typing import Any, AsyncIterator, Callable
+from typing import Annotated, Any, AsyncIterator, Callable
 import pydantic
 from google.antigravity import types
+from google.antigravity.models import _coerce_models_list
 
 
 class AgentConfig(abc.ABC, pydantic.BaseModel):

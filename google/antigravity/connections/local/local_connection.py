@@ -44,6 +44,7 @@ from google.antigravity.connections.local import localharness_pb2
 from google.antigravity.connections.local import types as local_types
 from google.antigravity.hooks import hook_runner as h_runner
 from google.antigravity.hooks import hooks
+from google.antigravity.models import DEFAULT_IMAGE_GENERATION_MODEL
 from google.antigravity.tools import tool_runner as t_runner
 
 _ANY_ADAPTER = pydantic.TypeAdapter(Any)
@@ -1619,6 +1620,10 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
         and types.BuiltinTools.START_SUBAGENT in active_tools
     )
 
+    image_model_name = DEFAULT_IMAGE_GENERATION_MODEL
+    if self._gemini_config:
+      image_model_name = self._gemini_config.models.image_generation.name
+
     harness_side_tools = localharness_pb2.HarnessSideTools(
         subagents=localharness_pb2.SubagentsConfig(enabled=subagent_enabled),
         find=localharness_pb2.FindToolConfig(
@@ -1647,7 +1652,7 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
         ),
         generate_image=localharness_pb2.GenerateImageToolConfig(
             enabled=types.BuiltinTools.GENERATE_IMAGE in active_tools,
-            model_name=cfg.image_model,
+            model_name=image_model_name,
         ),
     )
 

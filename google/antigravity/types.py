@@ -26,8 +26,18 @@ import enum
 import mimetypes
 import pathlib
 from typing import Annotated, Any, AsyncIterator, Callable, Literal, TypeVar, cast
+import warnings
 
 import pydantic
+from google.antigravity.models import DEFAULT_IMAGE_GENERATION_MODEL
+from google.antigravity.models import DEFAULT_MODEL
+from google.antigravity.models import GeminiAPIEndpoint
+from google.antigravity.models import GeminiModelOptions
+from google.antigravity.models import ModelEndpoint
+from google.antigravity.models import ModelTarget
+from google.antigravity.models import ModelType
+from google.antigravity.models import ThinkingLevel
+from google.antigravity.models import VertexEndpoint
 
 _BaseMediaT = TypeVar("_BaseMediaT", bound="_BaseMedia")
 
@@ -37,6 +47,12 @@ __all__ = [
     "ModelEntry",
     "ModelConfig",
     "GeminiConfig",
+    "ModelType",
+    "ModelEndpoint",
+    "GeminiAPIEndpoint",
+    "VertexEndpoint",
+    "GeminiModelOptions",
+    "ModelTarget",
     "SystemInstructionSection",
     "CustomSystemInstructions",
     "TemplatedSystemInstructions",
@@ -86,30 +102,9 @@ __all__ = [
 # Config types
 # =============================================================================
 
-DEFAULT_MODEL = "gemini-3.5-flash"
-DEFAULT_IMAGE_GENERATION_MODEL = "gemini-3.1-flash-image-preview"
-
-
-class ThinkingLevel(str, enum.Enum):
-  """Thinking level for Gemini models that support extended thinking.
-
-  Controls the amount of reasoning the model performs before responding.
-  See https://ai.google.dev/gemini-api/docs/thinking#thinking-levels for
-  details.
-
-  Attributes:
-    MINIMAL: Minimal thinking.
-    LOW: Low thinking.
-    MEDIUM: Medium thinking.
-    HIGH: High thinking.
-  """
-
-  MINIMAL = "minimal"
-  LOW = "low"
-  MEDIUM = "medium"
-  HIGH = "high"
-
-
+@warnings.deprecated(
+    "GenerationConfig is deprecated; use ModelOptions instead."
+)
 class GenerationConfig(pydantic.BaseModel):
   """Generation parameters for a model.
 
@@ -128,6 +123,7 @@ def _coerce_model_entry(v: "ModelEntry | str") -> "ModelEntry":
   return v
 
 
+@warnings.deprecated("ModelEntry is deprecated; use ModelConfig instead.")
 class ModelEntry(pydantic.BaseModel):
   """A model with optional auth and generation overrides.
 
@@ -144,6 +140,9 @@ class ModelEntry(pydantic.BaseModel):
   )
 
 
+@warnings.deprecated(
+    "ModelConfig (legacy) is deprecated; use ModelTarget instead."
+)
 class ModelConfig(pydantic.BaseModel):
   """Model selection for each capability.
 
@@ -166,6 +165,9 @@ class ModelConfig(pydantic.BaseModel):
   )
 
 
+@warnings.deprecated(
+    "GeminiConfig is deprecated; use AgentConfig.models instead."
+)
 class GeminiConfig(pydantic.BaseModel):
   """Configuration for the Gemini model backend.
 
@@ -361,8 +363,6 @@ class CapabilitiesConfig(pydantic.BaseModel):
       saving tokens and preventing the model from even considering them.
     compaction_threshold: Token count after which the context window may be
       compacted. When None, the backend's default is used.
-    image_model: The model to use for image generation. Defaults to
-      'gemini-3.1-flash-image-preview'.
     finish_tool_schema_json: Optional JSON schema string for the finish tool.
   """
 
@@ -370,7 +370,6 @@ class CapabilitiesConfig(pydantic.BaseModel):
   enabled_tools: list[BuiltinTools] | None = None
   disabled_tools: list[BuiltinTools] | None = None
   compaction_threshold: int | None = None
-  image_model: str = "gemini-3.1-flash-image-preview"
   finish_tool_schema_json: str | None = None
 
   @pydantic.model_validator(mode="after")

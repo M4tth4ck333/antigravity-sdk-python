@@ -542,6 +542,46 @@ class GeminiConfigTest(unittest.TestCase):
     self.assertEqual(config.api_key, "new-key")
 
 
+class ModelTargetTest(unittest.TestCase):
+  """Tests for the polymorphic ModelTarget hierarchy."""
+
+  def test_basic_text_construction(self):
+    options = types.GeminiModelOptions(
+        thinking_level=types.ThinkingLevel.HIGH,
+    )
+    endpoint = types.GeminiAPIEndpoint(api_key="test-key", options=options)
+    mc = types.ModelTarget(
+        name="gemini-pro",
+        types=[types.ModelType.TEXT],
+        endpoint=endpoint,
+    )
+    self.assertEqual(mc.name, "gemini-pro")
+    self.assertEqual(mc.types, [types.ModelType.TEXT])
+    self.assertIsInstance(mc.endpoint, types.GeminiAPIEndpoint)
+    self.assertEqual(mc.endpoint.api_key, "test-key")
+    self.assertEqual(
+        mc.endpoint.options.thinking_level, types.ThinkingLevel.HIGH
+    )
+
+  def test_vertex_endpoint_construction(self):
+    endpoint = types.VertexEndpoint(project="my-proj", location="us-east1")
+    mc = types.ModelTarget(
+        name="gemini-ultra",
+        types=[types.ModelType.TEXT],
+        endpoint=endpoint,
+    )
+    self.assertIsInstance(mc.endpoint, types.VertexEndpoint)
+    self.assertEqual(mc.endpoint.project, "my-proj")
+    self.assertEqual(mc.endpoint.location, "us-east1")
+
+  def test_image_model_construction(self):
+    mc = types.ModelTarget(
+        name="imagen-3",
+        types=[types.ModelType.IMAGE],
+    )
+    self.assertEqual(mc.types, [types.ModelType.IMAGE])
+
+
 class SystemInstructionsTest(unittest.TestCase):
   """Tests for the SystemInstructions Pydantic model union."""
 
