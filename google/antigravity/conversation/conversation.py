@@ -351,17 +351,6 @@ class Conversation:
     """Cancels the current turn in progress."""
     await self._connection.cancel()
 
-  async def delete(self) -> None:
-    """Deletes this conversation and all associated state from the backend."""
-    await self._connection.delete()
-
-  async def signal_idle(self) -> None:
-    """Signals that the conversation is ready to receive input.
-
-    This is used by the harness to indicate that the agent can proceed.
-    """
-    await self._connection.signal_idle()
-
   async def wait_for_idle(self) -> None:
     """Blocks until the conversation is idle and ready for the next turn."""
     await self._connection.wait_for_idle()

@@ -1232,7 +1232,7 @@ class LocalConnection(connection.Connection):
         if not res.allow:
           reason = res.message or "No reason provided"
           err_msg = f"Tool execution denied by hook policy: {reason}"
-          await self.send_tool_results([
+          await self._send_tool_results([
               types.ToolResult(
                   id=tool_call.id,
                   name=tool_call.name,
@@ -1283,7 +1283,7 @@ class LocalConnection(connection.Connection):
             op_context = hooks.OperationContext(self._get_turn_context())
           await self._hook_runner.dispatch_post_tool_call(op_context, result)
 
-        await self.send_tool_results([result])
+        await self._send_tool_results([result])
       else:
         logging.warning(
             "Received tool call %s but no tool runner is configured. "
@@ -1292,7 +1292,7 @@ class LocalConnection(connection.Connection):
         )
     except Exception as e:  # pylint: disable=broad-except
       logging.exception("_handle_tool_call failed; returning error to model")
-      await self.send_tool_results([
+      await self._send_tool_results([
           types.ToolResult(
               id=tool_call.id,
               name=tool_call.name,
@@ -1325,7 +1325,7 @@ class LocalConnection(connection.Connection):
 
     return output
 
-  async def send_tool_results(self, results: list[types.ToolResult]) -> None:
+  async def _send_tool_results(self, results: list[types.ToolResult]) -> None:
     """Sends tool execution results back to the harness.
 
     Args:

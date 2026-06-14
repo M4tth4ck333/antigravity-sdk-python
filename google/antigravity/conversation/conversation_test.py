@@ -640,20 +640,6 @@ class ConversationLifecycleTest(unittest.IsolatedAsyncioTestCase):
     await conv.cancel()
     mock_connection.cancel.assert_called_once()
 
-  async def test_delete_delegates(self):
-    """Verifies delete delegates directly to connection."""
-    mock_connection = mock.AsyncMock(spec=connection.Connection)
-    conv = conversation.Conversation(mock_connection)
-    await conv.delete()
-    mock_connection.delete.assert_called_once()
-
-  async def test_signal_idle_delegates(self):
-    """Verifies signal_idle delegates directly to connection."""
-    mock_connection = mock.AsyncMock(spec=connection.Connection)
-    conv = conversation.Conversation(mock_connection)
-    await conv.signal_idle()
-    mock_connection.signal_idle.assert_called_once()
-
   async def test_wait_for_idle_delegates(self):
     """Verifies wait_for_idle delegates directly to connection."""
     mock_connection = mock.AsyncMock(spec=connection.Connection)

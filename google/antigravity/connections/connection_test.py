@@ -42,11 +42,9 @@ class ConnectionTest(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(conn.conversation_id, "")
 
     await conn.cancel()
-    await conn.delete()
-    await conn.signal_idle()
     await conn.wait_for_idle()
     self.assertFalse(await conn.wait_for_wakeup())
-    await conn.send_tool_results([])
+    await conn._send_tool_results([])
 
 
 class AgentConfigTest(unittest.TestCase):

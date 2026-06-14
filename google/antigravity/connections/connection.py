@@ -153,14 +153,6 @@ class Connection(abc.ABC):
     """Cancels the current turn in progress."""
     pass
 
-  async def delete(self) -> None:
-    """Deletes this connection and all associated state from the backend."""
-    pass
-
-  async def signal_idle(self) -> None:
-    """Signals that the connection is idle and ready to receive input."""
-    pass
-
   async def wait_for_idle(self) -> None:
     """Blocks until the connection becomes idle."""
     pass
@@ -176,7 +168,7 @@ class Connection(abc.ABC):
     """
     return False
 
-  async def send_tool_results(self, results: list[types.ToolResult]) -> None:
+  async def _send_tool_results(self, results: list[types.ToolResult]) -> None:
     """Sends tool execution results back to the agent.
 
     Each connection strategy serializes the results into the backend
