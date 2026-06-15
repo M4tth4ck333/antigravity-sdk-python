@@ -644,18 +644,24 @@ class SystemInstructionsTest(unittest.TestCase):
     self.assertEqual(si.sections, [])
 
 
-class BuiltinToolsTest(unittest.TestCase):
+class BuiltinToolsTest(parameterized.TestCase):
   """Tests for the BuiltinTools enum."""
 
-  def test_enum_values(self):
+  @parameterized.named_parameters(
+      ("list_dir", types.BuiltinTools.LIST_DIR, "list_directory"),
+      ("search_dir", types.BuiltinTools.SEARCH_DIR, "search_directory"),
+      ("view_file", types.BuiltinTools.VIEW_FILE, "view_file"),
+      ("create_file", types.BuiltinTools.CREATE_FILE, "create_file"),
+      ("edit_file", types.BuiltinTools.EDIT_FILE, "edit_file"),
+      ("run_command", types.BuiltinTools.RUN_COMMAND, "run_command"),
+      ("ask_question", types.BuiltinTools.ASK_QUESTION, "ask_question"),
+      ("search_web", types.BuiltinTools.SEARCH_WEB, "search_web"),
+      ("start_subagent", types.BuiltinTools.START_SUBAGENT, "start_subagent"),
+      ("generate_image", types.BuiltinTools.GENERATE_IMAGE, "generate_image"),
+  )
+  def test_enum_values(self, enum_member, expected_value):
     """Verifies each enum member has the expected string value."""
-    self.assertEqual(types.BuiltinTools.LIST_DIR, "list_directory")
-    self.assertEqual(types.BuiltinTools.SEARCH_DIR, "search_directory")
-    self.assertEqual(types.BuiltinTools.VIEW_FILE, "view_file")
-    self.assertEqual(types.BuiltinTools.CREATE_FILE, "create_file")
-    self.assertEqual(types.BuiltinTools.EDIT_FILE, "edit_file")
-    self.assertEqual(types.BuiltinTools.RUN_COMMAND, "run_command")
-    self.assertEqual(types.BuiltinTools.ASK_QUESTION, "ask_question")
+    self.assertEqual(enum_member, expected_value)
 
   def test_read_only_covers_all_tools(self):
     """Verifies read_only + write tools = full enum.
@@ -672,6 +678,7 @@ class BuiltinToolsTest(unittest.TestCase):
         types.BuiltinTools.ASK_QUESTION,
         types.BuiltinTools.START_SUBAGENT,
         types.BuiltinTools.GENERATE_IMAGE,
+        types.BuiltinTools.SEARCH_WEB,
     }
     self.assertEqual(
         read_only | write_tools,

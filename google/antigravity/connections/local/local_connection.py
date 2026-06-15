@@ -116,6 +116,7 @@ _BUILTIN_TOOL_PROTO_FIELDS: dict[types.BuiltinTools, str] = {
     types.BuiltinTools.VIEW_FILE: "view_file",
     types.BuiltinTools.START_SUBAGENT: "invoke_subagent",
     types.BuiltinTools.GENERATE_IMAGE: "generate_image",
+    types.BuiltinTools.SEARCH_WEB: "search_web",
     types.BuiltinTools.FINISH: "finish",
 }
 
@@ -177,6 +178,7 @@ def _extract_tool_result(
   _search_dir = _BUILTIN_TOOL_PROTO_FIELDS[types.BuiltinTools.SEARCH_DIR]
   _edit_file = _BUILTIN_TOOL_PROTO_FIELDS[types.BuiltinTools.EDIT_FILE]
   _gen_image = _BUILTIN_TOOL_PROTO_FIELDS[types.BuiltinTools.GENERATE_IMAGE]
+  _search_web = _BUILTIN_TOOL_PROTO_FIELDS[types.BuiltinTools.SEARCH_WEB]
 
   # run_command -> raw stdout/stderr, e.g. "hello world\n"
   if step_update.HasField(_run_command):
@@ -218,6 +220,11 @@ def _extract_tool_result(
       return local_types.GenerateImageResult(
           image_name=gi.image_name, aspect_ratio=gi.aspect_ratio
       )
+  # search_web -> summary text
+  elif step_update.HasField(_search_web):
+    sw = step_update.search_web
+    if sw.summary:
+      return local_types.SearchWebResult(summary=sw.summary)
   return None
 
 
@@ -1730,6 +1737,9 @@ class LocalConnectionStrategy(connection.ConnectionStrategy):
         generate_image=localharness_pb2.GenerateImageToolConfig(
             enabled=types.BuiltinTools.GENERATE_IMAGE in active_tools,
             model_name=image_model_name,
+        ),
+        search_web=localharness_pb2.SearchWebToolConfig(
+            enabled=types.BuiltinTools.SEARCH_WEB in active_tools
         ),
     )
 

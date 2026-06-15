@@ -1810,6 +1810,7 @@ class LocalConnectionStrategyConfigTest(parameterized.TestCase):
     self.assertTrue(config.harness_side_tools.write_to_file.enabled)
     self.assertTrue(config.harness_side_tools.grep_search.enabled)
     self.assertTrue(config.harness_side_tools.list_dir.enabled)
+    self.assertTrue(config.harness_side_tools.search_web.enabled)
 
   def test_capabilities_config_enabled_tools(self):
     """Verifies that enabled_tools allowlist excludes non-listed tools.
@@ -1837,6 +1838,7 @@ class LocalConnectionStrategyConfigTest(parameterized.TestCase):
         write_to_file=localharness_pb2.WriteToFileToolConfig(enabled=False),
         grep_search=localharness_pb2.GrepSearchToolConfig(enabled=False),
         list_dir=localharness_pb2.ListDirToolConfig(enabled=False),
+        search_web=localharness_pb2.SearchWebToolConfig(enabled=False),
     )
 
     self.assertEqual(config.harness_side_tools, expected_harness_side_tools)
@@ -4412,6 +4414,38 @@ class LocalConnectionBuiltinToolHooksTest(unittest.IsolatedAsyncioTestCase):
         assertions_fn=lambda r: (
             self.assertEqual(r.result.image_name, "sunset_photo"),
             self.assertEqual(r.result.aspect_ratio, "16:9"),
+        ),
+    )
+
+  async def test_tool_result_for_search_web(self):
+    """Verifies PostToolCallHook receives SearchWebResult for search_web.
+
+    What: PostToolCallHook receives a SearchWebResult with summary.
+    Why: search_web returns a summary of web search results. Hooks
+         may use this for logging or auditing search queries.
+    How: Simulate approval + STATE_DONE with summary set; assert the hook
+         receives SearchWebResult with the correct summary and verify string
+         representation.
+    """
+    from google.antigravity.connections.local import types as local_types  # pylint: disable=g-import-not-at-top
+
+    await self._run_post_hook_test(
+        confirm_kwargs=dict(
+            search_web=localharness_pb2.ActionSearchWeb(
+                query="google news",
+            ),
+        ),
+        done_kwargs=dict(
+            search_web=localharness_pb2.ActionSearchWeb(
+                query="google news",
+                summary="google news search results",
+            ),
+        ),
+        expected_name=types.BuiltinTools.SEARCH_WEB.value,
+        expected_type=local_types.SearchWebResult,
+        assertions_fn=lambda r: (
+            self.assertEqual(r.result.summary, "google news search results"),
+            self.assertEqual(str(r.result), "google news search results"),
         ),
     )
 

@@ -241,6 +241,7 @@ class BuiltinTools(str, enum.Enum):
     ASK_QUESTION: Ask the user a clarifying question.
     START_SUBAGENT: Invoke a subagent.
     GENERATE_IMAGE: Generate or edit images.
+    SEARCH_WEB: Search the web.
     FINISH: Finish the conversation and return structured output.
   """
 
@@ -254,6 +255,7 @@ class BuiltinTools(str, enum.Enum):
   ASK_QUESTION = "ask_question"
   START_SUBAGENT = "start_subagent"
   GENERATE_IMAGE = "generate_image"
+  SEARCH_WEB = "search_web"
   FINISH = "finish"
 
   @classmethod
@@ -288,6 +290,7 @@ class BuiltinTools(str, enum.Enum):
         cls.ASK_QUESTION,
         cls.START_SUBAGENT,
         cls.GENERATE_IMAGE,
+        cls.SEARCH_WEB,
         cls.FINISH,
     ]
 

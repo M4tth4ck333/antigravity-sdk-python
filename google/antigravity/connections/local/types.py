@@ -87,6 +87,15 @@ class GenerateImageResult(pydantic.BaseModel):
     return self.image_name
 
 
+class SearchWebResult(pydantic.BaseModel):
+  """Structured result from a search_web tool execution."""
+
+  summary: str = ""
+
+  def __str__(self) -> str:
+    return self.summary
+
+
 class TextResult(pydantic.BaseModel):
   """Generic fallback for tools without structured output (e.g. view_file)."""
 
@@ -104,5 +113,6 @@ ToolOutput = (
     | FindFileResult
     | EditFileResult
     | GenerateImageResult
+    | SearchWebResult
     | TextResult
 )
