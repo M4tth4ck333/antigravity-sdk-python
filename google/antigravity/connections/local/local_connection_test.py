@@ -612,10 +612,8 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     sent_allowed = await harness.wait_for_response()
     self.assertTrue(sent_allowed["toolConfirmation"]["accepted"])
     self.assertEqual(len(captured_tool_calls), 1)
-    self.assertEqual(
-        captured_tool_calls[0].name,
-        local_connection._get_mcp_tool_name("calc", "math_add"),
-    )
+    self.assertEqual(captured_tool_calls[0].name, "math_add")
+    self.assertEqual(captured_tool_calls[0].server_name, "calc")
     self.assertEqual(captured_tool_calls[0].args, {"x": 10, "y": 20})
 
   async def test_mcp_tool_confirmation_request_denied(self):
@@ -653,10 +651,8 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     sent_denied = await harness.wait_for_response()
     self.assertFalse(sent_denied["toolConfirmation"]["accepted"])
     self.assertEqual(len(captured_tool_calls), 1)
-    self.assertEqual(
-        captured_tool_calls[0].name,
-        local_connection._get_mcp_tool_name("calc", "math_multiply"),
-    )
+    self.assertEqual(captured_tool_calls[0].name, "math_multiply")
+    self.assertEqual(captured_tool_calls[0].server_name, "calc")
 
   async def test_tool_confirmation_request_has_id(self):
     hr = hook_runner.HookRunner()

@@ -113,11 +113,6 @@ DEFAULT_HOST_TOOL_NAME = "pre_request_host_tool_request"
 
 # Constants for MCP tool confirmation mapping.
 _MCP_TOOL_PROTO_FIELD = "mcp_tool"
-_MCP_TOOL_PREFIX = "mcp_"
-
-
-def _get_mcp_tool_name(server_name: str, tool_name: str) -> str:
-  return f"{_MCP_TOOL_PREFIX}{server_name}_{tool_name}"
 
 
 _IDLE_SENTINEL = object()
@@ -267,6 +262,7 @@ class LocalConnectionStep(types.Step):
     active_tool_name, sub_msg = active_tool_pair
     active_tool_args = sub_msg if isinstance(sub_msg, dict) else {}
 
+    active_server_name = None
     # Reconstruct the step's tool name and arguments from the Go-native McpTool
     # proto format to maintain Python-side trajectory parity.
     if not active_tool_name and _MCP_TOOL_PROTO_FIELD in step_dict:
@@ -274,7 +270,8 @@ class LocalConnectionStep(types.Step):
       if isinstance(mcp_dict, dict):
         server_name = mcp_dict.get("server_name", "")
         tool_name = mcp_dict.get("tool_name", "")
-        active_tool_name = _get_mcp_tool_name(server_name, tool_name)
+        active_tool_name = tool_name
+        active_server_name = server_name
         arguments_json = mcp_dict.get("arguments_json") or "{}"
         active_tool_args = json.loads(arguments_json)
 
@@ -295,6 +292,7 @@ class LocalConnectionStep(types.Step):
               args=active_tool_args,
               id=_make_step_id(traj_id, step_idx),
               canonical_path=canonical_path,
+              server_name=active_server_name,
           )
       )
 
@@ -1140,9 +1138,11 @@ class LocalConnection(connection.Connection):
           )
           break
 
+      server_name = None
       if not found_action and step_update.HasField(_MCP_TOOL_PROTO_FIELD):
         mcp_pb = getattr(step_update, _MCP_TOOL_PROTO_FIELD)
-        action_str = _get_mcp_tool_name(mcp_pb.server_name, mcp_pb.tool_name)
+        action_str = mcp_pb.tool_name
+        server_name = mcp_pb.server_name
         found_action = True
         args = json.loads(mcp_pb.arguments_json or "{}")
 
@@ -1165,6 +1165,7 @@ class LocalConnection(connection.Connection):
           name=action_str,
           args=args,
           canonical_path=canonical_path,
+          server_name=server_name,
       )
       allow = True
       op_ctx = None
