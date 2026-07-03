@@ -23,7 +23,6 @@ from __future__ import annotations
 import abc
 import enum
 import os
-from typing import Any
 
 import pydantic
 
@@ -129,16 +128,3 @@ class ModelTarget(pydantic.BaseModel):
   endpoint: ModelEndpoint | None = None
 
 
-def _coerce_models_list(v: Any) -> list[ModelTarget] | None:
-  """Coerces shorthand model definitions into a list of ModelTargets."""
-  if v is None:
-    return None
-  if isinstance(v, list):
-    coerced = []
-    for item in v:
-      if isinstance(item, dict):
-        coerced.append(ModelTarget.model_validate(item))
-      else:
-        coerced.append(item)
-    return coerced
-  return v
