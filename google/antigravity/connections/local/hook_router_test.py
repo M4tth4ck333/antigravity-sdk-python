@@ -17,8 +17,8 @@
 import asyncio
 from typing import Any
 from absl.testing import absltest
-from google.antigravity import types
 from google.antigravity.connections.local import localharness_pb2
+from google.antigravity import types
 from google.antigravity.connections.local import types as local_types
 from google.antigravity.connections.local.hook_router import HookRouter
 from google.antigravity.connections.local.local_connection import _extract_tool_result

@@ -1402,7 +1402,7 @@ def _to_mcp_server_proto(
     server_cfg: types.McpServerConfig,
 ) -> localharness_pb2.McpServerConfig:
   """Converts an McpServerConfig to a McpServerConfig proto."""
-  kwargs = {
+  kwargs: dict[str, Any] = {
       "name": server_cfg.name,
       "enabled_tools": server_cfg.enabled_tools or [],
       "disabled_tools": server_cfg.disabled_tools or [],
