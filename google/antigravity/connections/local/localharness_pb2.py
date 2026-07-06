@@ -232,16 +232,15 @@ DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
     b' \x01(\t"V\n\x05State\x12\x15\n\x11STATE_UNSPECIFIED\x10\x00\x12\x11\n\rSTATE_RUNNING\x10\x01\x12\x0e\n\nSTATE_IDLE\x10\x02\x12\x13\n\x0fSTATE_CANCELLED\x10\x03"9\n\x06Struct\x12/\n\x06\x66ields\x18\x01'
     b' \x03(\x0b\x32\x1f.antigravity.localharness.Field"E\n\x05\x46ield\x12\x0c\n\x04name\x18\x01'
     b' \x01(\t\x12.\n\x05value\x18\x02'
-    b' \x01(\x0b\x32\x1f.antigravity.localharness.Value"\xf4\x02\n\x05Value\x12\x39\n\nnull_value\x18\x01'
+    b' \x01(\x0b\x32\x1f.antigravity.localharness.Value"\xb7\x02\n\x05Value\x12\x39\n\nnull_value\x18\x01'
     b' \x01(\x0e\x32#.antigravity.localharness.NullValueH\x00\x12\x16\n\x0cnumber_value\x18\x02'
     b' \x01(\x01H\x00\x12\x16\n\x0cstring_value\x18\x03'
     b' \x01(\tH\x00\x12\x14\n\nbool_value\x18\x04'
     b' \x01(\x08H\x00\x12\x38\n\x0cstruct_value\x18\x05 \x01(\x0b\x32'
     b' .antigravity.localharness.StructH\x00\x12\x39\n\nlist_value\x18\x06'
     b' \x01(\x0b\x32#.antigravity.localharness.ListValueH\x00\x12\x30\n\x05media\x18\x07'
-    b' \x01(\x0b\x32\x1f.antigravity.localharness.MediaH\x00\x12;\n\x0bother_value\x18\x08'
-    b' \x01(\x0b\x32$.antigravity.localharness.OtherValueH\x00\x42\x06\n\x04kind"<\n\tListValue\x12/\n\x06values\x18\x01'
-    b' \x03(\x0b\x32\x1f.antigravity.localharness.Value"\x1f\n\nOtherValue*\x06\x08\xe8\x07\x10\xd0\x0f*\t\x08\xd0\x0f\x10\x80\x80\x80\x80\x02"q\n\x08ToolCall\x12\n\n\x02id\x18\x01'
+    b' \x01(\x0b\x32\x1f.antigravity.localharness.MediaH\x00\x42\x06\n\x04kind"<\n\tListValue\x12/\n\x06values\x18\x01'
+    b' \x03(\x0b\x32\x1f.antigravity.localharness.Value"q\n\x08ToolCall\x12\n\n\x02id\x18\x01'
     b' \x01(\t\x12\x0c\n\x04name\x18\x02'
     b' \x01(\t\x12\x16\n\x0e\x61rguments_json\x18\x03'
     b' \x01(\t\x12\x33\n\targuments\x18\x04 \x01(\x0b\x32'
@@ -344,12 +343,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MCPSTDIOTRANSPORT_ENVENTRY']._serialized_options = b'8\001'
   _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._loaded_options = None
   _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_LIFECYCLEHOOK']._serialized_start = 14575
-  _globals['_LIFECYCLEHOOK']._serialized_end = 14846
-  _globals['_MODELTYPE']._serialized_start = 14848
-  _globals['_MODELTYPE']._serialized_end = 14930
-  _globals['_NULLVALUE']._serialized_start = 14932
-  _globals['_NULLVALUE']._serialized_end = 14959
+  _globals['_LIFECYCLEHOOK']._serialized_start = 14481
+  _globals['_LIFECYCLEHOOK']._serialized_end = 14752
+  _globals['_MODELTYPE']._serialized_start = 14754
+  _globals['_MODELTYPE']._serialized_end = 14836
+  _globals['_NULLVALUE']._serialized_start = 14838
+  _globals['_NULLVALUE']._serialized_end = 14865
   _globals['_INPUTCONFIG']._serialized_start = 49
   _globals['_INPUTCONFIG']._serialized_end = 195
   _globals['_INITIALIZECONVERSATIONEVENT']._serialized_start = 197
@@ -499,73 +498,71 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_FIELD']._serialized_start = 10004
   _globals['_FIELD']._serialized_end = 10073
   _globals['_VALUE']._serialized_start = 10076
-  _globals['_VALUE']._serialized_end = 10448
-  _globals['_LISTVALUE']._serialized_start = 10450
-  _globals['_LISTVALUE']._serialized_end = 10510
-  _globals['_OTHERVALUE']._serialized_start = 10512
-  _globals['_OTHERVALUE']._serialized_end = 10543
-  _globals['_TOOLCALL']._serialized_start = 10545
-  _globals['_TOOLCALL']._serialized_end = 10658
-  _globals['_TOOLRESPONSE']._serialized_start = 10661
-  _globals['_TOOLRESPONSE']._serialized_end = 10846
-  _globals['_USERQUESTIONSRESPONSE']._serialized_start = 10849
-  _globals['_USERQUESTIONSRESPONSE']._serialized_end = 11117
-  _globals['_USERQUESTIONSRESPONSE_QUESTIONSRESPONSE']._serialized_start = 11025
-  _globals['_USERQUESTIONSRESPONSE_QUESTIONSRESPONSE']._serialized_end = 11107
-  _globals['_USERQUESTIONANSWER']._serialized_start = 11120
-  _globals['_USERQUESTIONANSWER']._serialized_end = 11254
-  _globals['_MULTIPLECHOICEANSWER']._serialized_start = 11256
-  _globals['_MULTIPLECHOICEANSWER']._serialized_end = 11338
+  _globals['_VALUE']._serialized_end = 10387
+  _globals['_LISTVALUE']._serialized_start = 10389
+  _globals['_LISTVALUE']._serialized_end = 10449
+  _globals['_TOOLCALL']._serialized_start = 10451
+  _globals['_TOOLCALL']._serialized_end = 10564
+  _globals['_TOOLRESPONSE']._serialized_start = 10567
+  _globals['_TOOLRESPONSE']._serialized_end = 10752
+  _globals['_USERQUESTIONSRESPONSE']._serialized_start = 10755
+  _globals['_USERQUESTIONSRESPONSE']._serialized_end = 11023
+  _globals['_USERQUESTIONSRESPONSE_QUESTIONSRESPONSE']._serialized_start = 10931
+  _globals['_USERQUESTIONSRESPONSE_QUESTIONSRESPONSE']._serialized_end = 11013
+  _globals['_USERQUESTIONANSWER']._serialized_start = 11026
+  _globals['_USERQUESTIONANSWER']._serialized_end = 11160
+  _globals['_MULTIPLECHOICEANSWER']._serialized_start = 11162
+  _globals['_MULTIPLECHOICEANSWER']._serialized_end = 11244
   _globals['_MEDIA']._serialized_start = 9381
   _globals['_MEDIA']._serialized_end = 9442
-  _globals['_USAGEMETADATA']._serialized_start = 11404
-  _globals['_USAGEMETADATA']._serialized_end = 11572
-  _globals['_MCPSERVERCONFIG']._serialized_start = 11575
-  _globals['_MCPSERVERCONFIG']._serialized_end = 12000
-  _globals['_MCPSERVERCONFIG_AUTHPROVIDERTYPE']._serialized_start = 11890
-  _globals['_MCPSERVERCONFIG_AUTHPROVIDERTYPE']._serialized_end = 11987
-  _globals['_MCPSTDIOTRANSPORT']._serialized_start = 12003
-  _globals['_MCPSTDIOTRANSPORT']._serialized_end = 12164
-  _globals['_MCPSTDIOTRANSPORT_ENVENTRY']._serialized_start = 12122
-  _globals['_MCPSTDIOTRANSPORT_ENVENTRY']._serialized_end = 12164
-  _globals['_MCPHTTPTRANSPORT']._serialized_start = 12167
-  _globals['_MCPHTTPTRANSPORT']._serialized_end = 12320
-  _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._serialized_start = 12274
-  _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._serialized_end = 12320
-  _globals['_ACTIONMCPTOOL']._serialized_start = 12322
-  _globals['_ACTIONMCPTOOL']._serialized_end = 12401
-  _globals['_CALLHOOKREQUEST']._serialized_start = 12404
-  _globals['_CALLHOOKREQUEST']._serialized_end = 12851
-  _globals['_CALLHOOKRESPONSE']._serialized_start = 12854
-  _globals['_CALLHOOKRESPONSE']._serialized_end = 13203
-  _globals['_PRETOOLARGS']._serialized_start = 13205
-  _globals['_PRETOOLARGS']._serialized_end = 13282
-  _globals['_POSTTOOLARGS']._serialized_start = 13284
-  _globals['_POSTTOOLARGS']._serialized_end = 13407
-  _globals['_ONTOOLERRORARGS']._serialized_start = 13409
-  _globals['_ONTOOLERRORARGS']._serialized_end = 13527
-  _globals['_PRETURNARGS']._serialized_start = 13529
-  _globals['_PRETURNARGS']._serialized_end = 13599
-  _globals['_POSTTURNARGS']._serialized_start = 13601
-  _globals['_POSTTURNARGS']._serialized_end = 13638
-  _globals['_EMPTYRESULT']._serialized_start = 13640
-  _globals['_EMPTYRESULT']._serialized_end = 13653
-  _globals['_ONTOOLERRORRESULT']._serialized_start = 13655
-  _globals['_ONTOOLERRORRESULT']._serialized_end = 13704
-  _globals['_PRETOOLRESULT']._serialized_start = 13707
-  _globals['_PRETOOLRESULT']._serialized_end = 13865
-  _globals['_PRETOOLRESULT_DECISION']._serialized_start = 13808
-  _globals['_PRETOOLRESULT_DECISION']._serialized_end = 13865
-  _globals['_PRETURNRESULT']._serialized_start = 13868
-  _globals['_PRETURNRESULT']._serialized_end = 14026
-  _globals['_PRETURNRESULT_DECISION']._serialized_start = 13808
-  _globals['_PRETURNRESULT_DECISION']._serialized_end = 13865
-  _globals['_CUSTOMAGENT']._serialized_start = 14029
-  _globals['_CUSTOMAGENT']._serialized_end = 14271
-  _globals['_TOOLOUTPUTTRUNCATION']._serialized_start = 14274
-  _globals['_TOOLOUTPUTTRUNCATION']._serialized_end = 14572
-  _globals['_TOOLOUTPUTTRUNCATION_TRUNCATESTRATEGY']._serialized_start = 14462
-  _globals['_TOOLOUTPUTTRUNCATION_TRUNCATESTRATEGY']._serialized_end = 14500
-  _globals['_TOOLOUTPUTTRUNCATION_ERRORSTRATEGY']._serialized_start = 14502
-  _globals['_TOOLOUTPUTTRUNCATION_ERRORSTRATEGY']._serialized_end = 14560
+  _globals['_USAGEMETADATA']._serialized_start = 11310
+  _globals['_USAGEMETADATA']._serialized_end = 11478
+  _globals['_MCPSERVERCONFIG']._serialized_start = 11481
+  _globals['_MCPSERVERCONFIG']._serialized_end = 11906
+  _globals['_MCPSERVERCONFIG_AUTHPROVIDERTYPE']._serialized_start = 11796
+  _globals['_MCPSERVERCONFIG_AUTHPROVIDERTYPE']._serialized_end = 11893
+  _globals['_MCPSTDIOTRANSPORT']._serialized_start = 11909
+  _globals['_MCPSTDIOTRANSPORT']._serialized_end = 12070
+  _globals['_MCPSTDIOTRANSPORT_ENVENTRY']._serialized_start = 12028
+  _globals['_MCPSTDIOTRANSPORT_ENVENTRY']._serialized_end = 12070
+  _globals['_MCPHTTPTRANSPORT']._serialized_start = 12073
+  _globals['_MCPHTTPTRANSPORT']._serialized_end = 12226
+  _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._serialized_start = 12180
+  _globals['_MCPHTTPTRANSPORT_HEADERSENTRY']._serialized_end = 12226
+  _globals['_ACTIONMCPTOOL']._serialized_start = 12228
+  _globals['_ACTIONMCPTOOL']._serialized_end = 12307
+  _globals['_CALLHOOKREQUEST']._serialized_start = 12310
+  _globals['_CALLHOOKREQUEST']._serialized_end = 12757
+  _globals['_CALLHOOKRESPONSE']._serialized_start = 12760
+  _globals['_CALLHOOKRESPONSE']._serialized_end = 13109
+  _globals['_PRETOOLARGS']._serialized_start = 13111
+  _globals['_PRETOOLARGS']._serialized_end = 13188
+  _globals['_POSTTOOLARGS']._serialized_start = 13190
+  _globals['_POSTTOOLARGS']._serialized_end = 13313
+  _globals['_ONTOOLERRORARGS']._serialized_start = 13315
+  _globals['_ONTOOLERRORARGS']._serialized_end = 13433
+  _globals['_PRETURNARGS']._serialized_start = 13435
+  _globals['_PRETURNARGS']._serialized_end = 13505
+  _globals['_POSTTURNARGS']._serialized_start = 13507
+  _globals['_POSTTURNARGS']._serialized_end = 13544
+  _globals['_EMPTYRESULT']._serialized_start = 13546
+  _globals['_EMPTYRESULT']._serialized_end = 13559
+  _globals['_ONTOOLERRORRESULT']._serialized_start = 13561
+  _globals['_ONTOOLERRORRESULT']._serialized_end = 13610
+  _globals['_PRETOOLRESULT']._serialized_start = 13613
+  _globals['_PRETOOLRESULT']._serialized_end = 13771
+  _globals['_PRETOOLRESULT_DECISION']._serialized_start = 13714
+  _globals['_PRETOOLRESULT_DECISION']._serialized_end = 13771
+  _globals['_PRETURNRESULT']._serialized_start = 13774
+  _globals['_PRETURNRESULT']._serialized_end = 13932
+  _globals['_PRETURNRESULT_DECISION']._serialized_start = 13714
+  _globals['_PRETURNRESULT_DECISION']._serialized_end = 13771
+  _globals['_CUSTOMAGENT']._serialized_start = 13935
+  _globals['_CUSTOMAGENT']._serialized_end = 14177
+  _globals['_TOOLOUTPUTTRUNCATION']._serialized_start = 14180
+  _globals['_TOOLOUTPUTTRUNCATION']._serialized_end = 14478
+  _globals['_TOOLOUTPUTTRUNCATION_TRUNCATESTRATEGY']._serialized_start = 14368
+  _globals['_TOOLOUTPUTTRUNCATION_TRUNCATESTRATEGY']._serialized_end = 14406
+  _globals['_TOOLOUTPUTTRUNCATION_ERRORSTRATEGY']._serialized_start = 14408
+  _globals['_TOOLOUTPUTTRUNCATION_ERRORSTRATEGY']._serialized_end = 14466
 # @@protoc_insertion_point(module_scope)
