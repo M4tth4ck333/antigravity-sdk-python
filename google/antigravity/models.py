@@ -52,12 +52,14 @@ class ThinkingLevel(str, enum.Enum):
     LOW: Low thinking.
     MEDIUM: Medium thinking.
     HIGH: High thinking.
+    EXTRA_HIGH: Extra-high thinking.
   """
 
   MINIMAL = "minimal"
   LOW = "low"
   MEDIUM = "medium"
   HIGH = "high"
+  EXTRA_HIGH = "extra_high"
 
 
 class ModelType(str, enum.Enum):
@@ -123,5 +125,3 @@ class ModelTarget(pydantic.BaseModel):
       default_factory=lambda: [ModelType.TEXT]
   )
   endpoint: ModelEndpoint | None = None
-
-
