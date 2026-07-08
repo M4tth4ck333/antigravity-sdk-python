@@ -2814,6 +2814,7 @@ class LocalConnectionDisconnectTest(unittest.IsolatedAsyncioTestCase):
     await harness.disconnect_sdk()
     self.mock_process.stdin.close.assert_called_once()
 
+  @mock.patch.object(local_connection, "_PROCESS_WAIT_TIMEOUT_SECONDS", 5)
   async def test_disconnect_waits_for_process(self):
     """Verifies disconnect waits for the harness process to exit.
 
@@ -2828,6 +2829,7 @@ class LocalConnectionDisconnectTest(unittest.IsolatedAsyncioTestCase):
     await harness.disconnect_sdk()
     self.mock_process.wait.assert_called_with(timeout=5)
 
+  @mock.patch.object(local_connection, "_PROCESS_WAIT_TIMEOUT_SECONDS", 5)
   async def test_disconnect_terminates_on_timeout(self):
     """Verifies SIGTERM is sent when the process doesn't exit in time.
 
@@ -2847,6 +2849,7 @@ class LocalConnectionDisconnectTest(unittest.IsolatedAsyncioTestCase):
     await harness.disconnect_sdk()
     self.mock_process.terminate.assert_called_once()
 
+  @mock.patch.object(local_connection, "_PROCESS_WAIT_TIMEOUT_SECONDS", 5)
   async def test_disconnect_kills_on_double_timeout(self):
     """Verifies SIGKILL is sent when SIGTERM also fails.
 
@@ -2855,7 +2858,7 @@ class LocalConnectionDisconnectTest(unittest.IsolatedAsyncioTestCase):
     """
     self.mock_process.wait.side_effect = [
         subprocess.TimeoutExpired("cmd", 5),  # First wait.
-        subprocess.TimeoutExpired("cmd", 1),  # After terminate.
+        subprocess.TimeoutExpired("cmd", 15),  # After terminate.
         0,  # After kill.
     ]
     harness = test_utils.TestLocalHarness(

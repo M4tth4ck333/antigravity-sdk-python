@@ -44,6 +44,10 @@ from google.antigravity.tools import tool_runner as t_runner
 LocalConnectionStep = event_processor.LocalConnectionStep
 IDLE_SENTINEL = event_processor.IDLE_SENTINEL
 CLOSE_SENTINEL = event_processor.CLOSE_SENTINEL
+# In some cases e.g. during eval runs, the harness needs extra time to
+# shutdown cleanly. So we give it ample time. This constant is needed to make
+# tests fast.
+_PROCESS_WAIT_TIMEOUT_SECONDS = 3 * 60
 
 
 def to_proto_model_type(
@@ -362,7 +366,7 @@ class LocalConnection(connection.Connection):
       # Wait for the process to exit, escalating if needed.
       if self._process:
         try:
-          self._process.wait(timeout=5)
+          self._process.wait(timeout=_PROCESS_WAIT_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
           self._process.terminate()
           try:
