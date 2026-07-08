@@ -197,12 +197,6 @@ class LocalAgentConfig(BaseLocalAgentConfig):
         init_data.update(kwargs_dict)
     pydantic.BaseModel.__init__(self, **init_data)
 
-  @pydantic.field_validator("app_data_dir")
-  def _validate_app_data_dir(cls, v: str | None) -> str | None:  # pylint: disable=no-self-argument
-    if v is not None and not os.path.isabs(v):
-      raise ValueError(f"app_data_dir must be an absolute path, got '{v}'")
-    return v
-
   def _build_shorthand_endpoint(self) -> types.ModelEndpoint | None:
     """Builds the custom endpoint from connection shorthand fields."""
     if self.vertex:
@@ -279,43 +273,6 @@ class LocalAgentConfig(BaseLocalAgentConfig):
     """Applies top-level shorthand fields (model, api_key) to models."""
     self.__dict__["models"] = self._merge_models_list()
     return self
-
-  @pydantic.model_validator(mode="after")
-  def _apply_workspace_policies(self) -> "LocalAgentConfig":
-    """Prepends workspace-scoping policies when workspaces are configured.
-
-    Always prepends — even when the user sets explicit policies — so that
-    file operations are always restricted to the configured workspaces.
-    Users who want truly unrestricted access should set ``workspaces=[]``.
-    """
-    if self.workspaces:
-      # Automatically include the app data directory in the workspace allowlist
-      app_data_path = self.app_data_dir or DEFAULT_APP_DATA_DIR
-      resolved_app_data_dir = pathlib.Path(app_data_path).expanduser().resolve()
-      allowed_paths = [*self.workspaces, str(resolved_app_data_dir)]
-
-      self.__dict__["policies"] = (
-          policy.workspace_only(allowed_paths) + self.policies
-      )
-    return self
-
-  def _get_system_instructions(self) -> types.SystemInstructions | None:
-    """Returns the system instructions, normalizing shorthand if needed."""
-    if isinstance(self.system_instructions, str):
-      return types.TemplatedSystemInstructions(
-          sections=[
-              types.SystemInstructionSection(content=self.system_instructions)
-          ]
-      )
-    return self.system_instructions
-
-  def _get_or_create_save_dir(self) -> str:
-    """Returns save_dir, generating a temporary one if not specified."""
-    save_dir = self.save_dir
-    if save_dir is None:
-      save_dir = tempfile.mkdtemp(prefix="antigravity_")
-      logging.info("No save_dir specified; using %s", save_dir)
-    return save_dir
 
   def create_strategy(
       self,
