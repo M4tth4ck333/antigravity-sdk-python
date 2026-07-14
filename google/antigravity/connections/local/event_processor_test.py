@@ -18,6 +18,7 @@ import unittest
 from unittest import mock
 
 from absl.testing import absltest
+from google.protobuf import json_format
 
 from google.antigravity.connections.local import localharness_pb2
 from google.antigravity import types
@@ -291,6 +292,24 @@ class LocalConnectionStepFromDictTest(absltest.TestCase):
         {"arg1": "val1", "file_path": "/foo"},
     )
     self.assertEqual(step.tool_calls[0].canonical_path, "/foo")
+    self.assertEqual(step.tool_calls[0].id, "call_1")
+
+  def test_step_type_tool_call_with_custom_tool_fallback_id(self):
+    """Verifies that fallback ID is used if custom_tool.tool_call.id is missing."""
+    step = event_processor.LocalConnectionStep.from_dict({
+        "trajectory_id": "traj_123",
+        "step_index": 5,
+        "source": "SOURCE_MODEL",
+        "state": "STATE_DONE",
+        "custom_tool": {
+            "tool_call": {
+                "name": "my_custom_tool",
+                "arguments_json": "{}",
+            },
+        },
+    })
+    self.assertLen(step.tool_calls, 1)
+    self.assertEqual(step.tool_calls[0].id, "traj_123:5")
 
 
 class LocalHarnessEventProcessorTest(unittest.IsolatedAsyncioTestCase):
@@ -428,6 +447,85 @@ class LocalHarnessEventProcessorTest(unittest.IsolatedAsyncioTestCase):
     await processor.process_event(event)
     self.assertTrue(processor.parent_idle)
     self.assertTrue(processor.is_idle.is_set())
+
+  async def test_process_event_skips_local_custom_tool_in_step_update(self):
+    """Verifies that process_event removes custom_tool if it is a local tool."""
+    mock_tool_runner = mock.MagicMock()
+    mock_tool_runner.tool_names = ["my_local_tool"]
+    mock_hook_runner = mock.AsyncMock()
+    processor = event_processor.LocalHarnessEventProcessor(
+        send_input_event_fn=mock.AsyncMock(),
+        tool_runner=mock_tool_runner,
+        hook_runner=mock_hook_runner,
+    )
+
+    step_update_pb = localharness_pb2.StepUpdate()
+    json_format.ParseDict(
+        {
+            "trajectory_id": "traj_123",
+            "step_index": 5,
+            "source": "SOURCE_MODEL",
+            "state": "STATE_DONE",
+            "custom_tool": {
+                "tool_call": {
+                    "name": "my_local_tool",
+                    "arguments_json": "{}",
+                },
+            },
+        },
+        step_update_pb,
+    )
+    event = localharness_pb2.OutputEvent(step_update=step_update_pb)
+
+    await processor.process_event(event)
+
+    self.assertEqual(processor.step_queue.qsize(), 1)
+    step = await processor.step_queue.get()
+    self.assertEqual(len(step.tool_calls), 0)
+    self.assertEqual(step.type, types.StepType.TOOL_CALL)
+
+    mock_hook_runner.dispatch_pre_step.assert_called_once()
+    called_step = mock_hook_runner.dispatch_pre_step.call_args[0][1]
+    self.assertEqual(called_step.type, types.StepType.TOOL_CALL)
+    self.assertEqual(len(called_step.tool_calls), 1)
+    self.assertEqual(called_step.tool_calls[0].name, "my_local_tool")
+
+  async def test_process_event_does_not_skip_remote_custom_tool_in_step_update(
+      self,
+  ):
+    """Verifies that process_event keeps custom_tool if it is not a local tool."""
+    mock_tool_runner = mock.MagicMock()
+    mock_tool_runner.tool_names = ["some_other_tool"]
+    processor = event_processor.LocalHarnessEventProcessor(
+        send_input_event_fn=mock.AsyncMock(),
+        tool_runner=mock_tool_runner,
+    )
+
+    step_update_pb = localharness_pb2.StepUpdate()
+    json_format.ParseDict(
+        {
+            "trajectory_id": "traj_123",
+            "step_index": 5,
+            "source": "SOURCE_MODEL",
+            "state": "STATE_DONE",
+            "custom_tool": {
+                "tool_call": {
+                    "name": "my_remote_tool",
+                    "arguments_json": "{}",
+                },
+            },
+        },
+        step_update_pb,
+    )
+    event = localharness_pb2.OutputEvent(step_update=step_update_pb)
+
+    await processor.process_event(event)
+
+    self.assertEqual(processor.step_queue.qsize(), 1)
+    step = await processor.step_queue.get()
+    self.assertEqual(len(step.tool_calls), 1)
+    self.assertEqual(step.tool_calls[0].name, "my_remote_tool")
+    self.assertEqual(step.type, types.StepType.TOOL_CALL)
 
 
 if __name__ == "__main__":

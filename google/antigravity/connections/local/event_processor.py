@@ -226,6 +226,7 @@ class LocalConnectionStep(types.Step):
     active_tool_args = sub_msg if isinstance(sub_msg, dict) else {}
 
     active_server_name = None
+    active_tool_id = None
     # Reconstruct the step's tool name and arguments from the Go-native McpTool
     # proto format to maintain Python-side trajectory parity.
     if not active_tool_name and _MCP_TOOL_PROTO_FIELD in step_dict:
@@ -244,6 +245,7 @@ class LocalConnectionStep(types.Step):
         tc_dict = ct_dict["tool_call"]
         if isinstance(tc_dict, dict):
           active_tool_name = tc_dict.get("name", "")
+          active_tool_id = tc_dict.get("id")
           arguments_json = tc_dict.get("arguments_json") or "{}"
           try:
             active_tool_args = json.loads(arguments_json)
@@ -265,7 +267,7 @@ class LocalConnectionStep(types.Step):
           types.ToolCall(
               name=active_tool_name,
               args=active_tool_args,
-              id=_make_step_id(traj_id, step_idx),
+              id=active_tool_id or _make_step_id(traj_id, step_idx),
               canonical_path=canonical_path,
               server_name=active_server_name,
           )
@@ -447,7 +449,30 @@ class LocalHarnessEventProcessor:
         )
       else:
         step_obj = parsed_step
-      await self.step_queue.put(step_obj)
+
+      step_obj_for_queue = step_obj
+      if self._tool_runner and step_obj.tool_calls:
+        is_local_custom_tool = False
+        for tc in step_obj.tool_calls:
+          if tc.name in self._tool_runner.tool_names:
+            is_local_custom_tool = True
+            break
+
+        if is_local_custom_tool:
+          # During live execution of a local custom tool, the Go harness
+          # sends both a StepUpdate event with custom_tool and a websocket
+          # tool_call event. To prevent duplicate ToolCallStart events on the
+          # client, we suppress the tool calls from this StepUpdate before
+          # putting it in the queue.
+          #
+          # This filtering is done here rather than in from_dict() because
+          # during history resumption, from_dict() is called directly to load
+          # historical steps. Since no websocket tool_call events are replayed
+          # during resumption, from_dict() must parse the custom_tool from the
+          # history payload to reconstruct the steps in the session.
+          step_obj_for_queue = step_obj.model_copy(update={"tool_calls": []})
+
+      await self.step_queue.put(step_obj_for_queue)
 
       # Record the main trajectory ID on the first step we see
       if self.main_trajectory_id is None and step_update.trajectory_id:
