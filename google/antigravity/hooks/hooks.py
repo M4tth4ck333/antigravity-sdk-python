@@ -207,7 +207,7 @@ class OnInteractionHook(
 
 
 # Compaction
-class OnCompactionHook(InspectHook):
+class OnCompactionHook(InspectHook[types.Step]):
   """Invoked when a context compaction event occurs.
 
   Compaction is triggered by the harness when the context window exceeds the
